@@ -1,297 +1,170 @@
 # CRUD de Usuários — API REST
 
-API REST desenvolvida com **Java e Spring Boot** para gerenciamento de usuários, utilizando **Spring Data JPA** e **PostgreSQL** como banco de dados.
+API REST desenvolvida com **Java 21 e Spring Boot 4.1.1** para gerenciamento de usuários.
 
-O projeto foi desenvolvido com foco na prática de conceitos fundamentais de desenvolvimento Backend, como criação de APIs REST, operações CRUD, persistência de dados, arquitetura em camadas e integração com banco de dados relacional.
+O projeto aplica conceitos de **REST, arquitetura em camadas, DTOs, Bean Validation, tratamento global de exceções, Spring Data JPA, PostgreSQL, Docker e testes automatizados**.
 
 ## Tecnologias
 
-* Java 21
-* Spring Boot 4.1.1
-* Spring Web MVC
-* Spring Data JPA
-* PostgreSQL
-* Maven
-* Docker
-* Docker Compose
-* Git/GitHub
-
-## Funcionalidades
-
-A API disponibiliza operações para gerenciamento de usuários:
-
-* Criar usuário
-* Consultar usuário por ID
-* Listar usuários
-* Atualizar usuário
-* Excluir usuário
+- Java 21
+- Spring Boot 4.1.1
+- Spring Web MVC
+- Spring Data JPA
+- Bean Validation
+- PostgreSQL 16
+- Maven
+- Docker / Docker Compose
+- OpenAPI / Swagger UI
+- JUnit 5
+- Mockito
+- H2 para testes
+- Git / GitHub
 
 ## Arquitetura
 
-O projeto utiliza uma organização em camadas:
-
-```text
+~~~text
+HTTP Request
+     ↓
 Controller
-    ↓
+     ↓
 Service
-    ↓
+     ↓
 Repository
-    ↓
+     ↓
 PostgreSQL
-```
+~~~
 
-### Estrutura principal
-
-```text
-src
-├── main
-│   ├── java
-│   │   └── com.example.crud
-│   │       ├── controller
-│   │       │   └── UserController.java
-│   │       ├── model
-│   │       │   └── User.java
-│   │       ├── repository
-│   │       │   └── UserRepository.java
-│   │       ├── service
-│   │       │   └── UserService.java
-│   │       └── CrudApplication.java
-│   │
-│   └── resources
-│       └── application.properties
-│
-└── test
-    └── java
-        └── com.example.crud
-            └── CrudApplicationTests.java
-```
-
-## Modelo de dados
-
-A entidade `User` possui os seguintes atributos:
-
-| Campo  | Tipo   | Descrição           |
-| ------ | ------ | ------------------- |
-| `id`   | Long   | Identificador único |
-| `name` | String | Nome do usuário     |
+A API utiliza DTOs para entrada e saída, evitando expor diretamente a entidade JPA.
 
 ## Endpoints
 
+| Método | Endpoint | Descrição | Status |
+|---|---|---|---|
+| POST | /users | Criar usuário | 201 Created |
+| GET | /users/{id} | Buscar usuário por ID | 200 OK |
+| GET | /users | Listar usuários | 200 OK |
+| PUT | /users/{id} | Atualizar usuário | 200 OK |
+| DELETE | /users/{id} | Excluir usuário | 204 No Content |
+
 ### Criar usuário
 
-**POST** `/user`
-
-Exemplo de requisição:
-
-```json
+~~~json
 {
   "name": "Jefferson Andrade"
 }
-```
-
-Resposta:
-
-```json
-{
-  "id": 1,
-  "name": "Jefferson Andrade"
-}
-```
-
----
-
-### Buscar usuário por ID
-
-**GET** `/user/{id}`
-
-Exemplo:
-
-```text
-GET /user/1
-```
-
-Resposta:
-
-```json
-{
-  "id": 1,
-  "name": "Jefferson Andrade"
-}
-```
-
----
-
-### Listar usuários
-
-**GET** `/user`
-
-Resposta:
-
-```json
-[
-  {
-    "id": 1,
-    "name": "Jefferson Andrade"
-  },
-  {
-    "id": 2,
-    "name": "Maria Silva"
-  }
-]
-```
-
----
+~~~
 
 ### Atualizar usuário
 
-**PUT** `/user`
-
-Exemplo:
-
-```json
+~~~json
 {
-  "id": 1,
   "name": "Jefferson Andrade Atualizado"
 }
-```
+~~~
 
----
+## Swagger / OpenAPI
 
-### Excluir usuário
+Com a aplicação em execução, acesse:
 
-**DELETE** `/user/{id}`
+- Swagger UI: `/swagger-ui.html`
+- OpenAPI JSON: `/v3/api-docs`
 
-Exemplo:
+O Springdoc OpenAPI suporta Spring Boot 4 e disponibiliza Swagger UI automaticamente. 
 
-```text
-DELETE /user/1
-```
-
-Resposta:
-
-```text
-204 No Content
-```
-
-## Como executar o projeto
+## Como executar
 
 ### Pré-requisitos
 
-Antes de executar a aplicação, tenha instalado:
-
-* Java 21
-* Maven
-* Docker e Docker Compose
-* Git
+- Java 21
+- Docker Desktop
+- Git
 
 ### 1. Clonar o projeto
 
-```bash
+~~~bash
 git clone <URL_DO_REPOSITORIO>
-```
-
-Acesse a pasta:
-
-```bash
 cd CRUD-de-Usuarios-API-REST
-```
+~~~
 
-### 2. Iniciar o PostgreSQL
+### 2. Subir o PostgreSQL
 
-Execute:
-
-```bash
+~~~bash
 docker compose up -d
-```
+~~~
 
-O Docker Compose iniciará um container PostgreSQL utilizando:
+Configuração:
 
-```text
+~~~text
 Database: crud
 Username: postgres
 Password: postgres
 Port: 5432
-```
+~~~
 
 ### 3. Executar a aplicação
 
-No Windows:
+Windows:
 
-```bash
+~~~bash
 mvnw.cmd spring-boot:run
-```
+~~~
 
-Ou, caso o Maven esteja instalado:
+Ou:
 
-```bash
+~~~bash
 mvn spring-boot:run
-```
+~~~
 
-A aplicação será executada localmente na porta padrão:
+A API será executada na porta 8080.
 
-```text
-http://localhost:8080
-```
+## Testes automatizados
 
-## Executando os testes
+O projeto possui:
 
-Para executar os testes:
+- teste de carregamento do contexto;
+- testes unitários do Service com Mockito;
+- testes da camada Web com MockMvc;
+- validação de entrada;
+- cenários de sucesso e erro.
 
-```bash
+MockMvc permite testar a camada Spring MVC sem iniciar um servidor HTTP real.
+
+Para executar:
+
+~~~bash
 mvnw.cmd test
-```
+~~~
 
-O projeto atualmente possui teste de carregamento do contexto da aplicação com Spring Boot.
+Os testes de contexto utilizam H2 em memória e não dependem do PostgreSQL ou Docker.
 
 ## Docker
 
-Para iniciar o banco de dados:
-
-```bash
+~~~bash
 docker compose up -d
-```
-
-Para verificar os containers:
-
-```bash
 docker compose ps
-```
-
-Para interromper os containers:
-
-```bash
 docker compose down
-```
+~~~
 
-## Objetivo do projeto
+## Boas práticas aplicadas
 
-Este projeto faz parte do meu processo de desenvolvimento de competências em **Java Backend**, colocando em prática conceitos de:
+- Arquitetura em camadas
+- DTOs para entrada e saída
+- Injeção de dependências por construtor
+- Bean Validation
+- Tratamento global de exceções
+- Status HTTP adequados
+- Spring Data JPA
+- Testes unitários e Web
+- H2 para testes
+- OpenAPI / Swagger
+- PostgreSQL via Docker Compose
 
-* Desenvolvimento de APIs REST
-* Spring Boot
-* Programação orientada a objetos
-* Persistência de dados com JPA
-* Integração com PostgreSQL
-* Arquitetura em camadas
-* Maven
-* Docker
-* Git e GitHub
+## Objetivo
 
-## Próximas evoluções
-
-Como evolução do projeto, pretendo implementar:
-
-* Bean Validation
-* Tratamento global de exceções
-* DTOs
-* Padronização das respostas da API
-* Documentação com Swagger/OpenAPI
-* Testes unitários e de integração
-* Variáveis de ambiente para configuração do banco
-* Pipeline de CI/CD
+Projeto desenvolvido como parte do meu processo de aprendizado em **Java Backend**, colocando em prática Java, Spring Boot, APIs REST, Spring Data JPA, PostgreSQL, Docker, testes automatizados, Git e GitHub.
 
 ## Autor
 
 **Jefferson Andrade**
 
-Estudante de Análise e Desenvolvimento de Sistemas com foco em **Java, Spring Boot e desenvolvimento Backend**.
+Estudante de Análise e Desenvolvimento de Sistemas na UNINTER, com foco em **Java, Spring Boot e desenvolvimento Backend**.
