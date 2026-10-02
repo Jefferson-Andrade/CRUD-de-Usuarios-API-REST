@@ -2,7 +2,6 @@ package com.example.crud.service;
 
 import com.example.crud.dto.UserRequestDTO;
 import com.example.crud.dto.UserResponseDTO;
-import com.example.crud.exception.UserNotFoundException;
 import com.example.crud.model.User;
 import com.example.crud.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -11,41 +10,58 @@ import java.util.List;
 
 @Service
 public class UserService {
+
     private final UserRepository userRepository;
 
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    public UserResponseDTO createUser(UserRequestDTO request) {
+    public UserResponseDTO createUser(UserRequestDTO dto) {
         User user = new User();
-        user.setName(request.name());
-        return toResponse(userRepository.save(user));
-    }
+        user.setName(dto.getName());
 
-    public UserResponseDTO getUserById(Long id) {
-        return toResponse(findUser(id));
+        User savedUser = userRepository.save(user);
+
+        return toResponseDTO(savedUser);
     }
 
     public List<UserResponseDTO> getAllUsers() {
-        return userRepository.findAll().stream().map(this::toResponse).toList();
+        return ((List<User>) userRepository.findAll())
+                .stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
-    public UserResponseDTO updateUser(Long id, UserRequestDTO request) {
-        User user = findUser(id);
-        user.setName(request.name());
-        return toResponse(userRepository.save(user));
+    public UserResponseDTO getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        return toResponseDTO(user);
+    }
+
+    public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        user.setName(dto.getName());
+
+        User updatedUser = userRepository.save(user);
+
+        return toResponseDTO(updatedUser);
     }
 
     public void deleteUser(Long id) {
-        userRepository.delete(findUser(id));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        userRepository.delete(user);
     }
 
-    private User findUser(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-    }
-
-    private UserResponseDTO toResponse(User user) {
-        return new UserResponseDTO(user.getId(), user.getName());
+    private UserResponseDTO toResponseDTO(User user) {
+        return new UserResponseDTO(
+                user.getId(),
+                user.getName()
+        );
     }
 }
