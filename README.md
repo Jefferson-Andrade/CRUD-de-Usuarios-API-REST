@@ -65,6 +65,11 @@ A API utiliza DTOs para entrada e saída, evitando expor diretamente a entidade 
 ## Swagger / OpenAPI 
 <img width="1917" height="1078" alt="API Swagger" src="https://github.com/user-attachments/assets/72f5de4c-5b12-4935-9441-ba753a13e739" />
 
+<img width="1917" height="1078" alt="POST" src="https://github.com/user-attachments/assets/27e9ef95-168d-46c7-903d-18b8b23e29ed" />
+
+<img width="1917" height="1078" alt="DELETE" src="https://github.com/user-attachments/assets/49dc4fd8-615f-414b-b00d-4f6cce461a18" />
+
+
 
 Com a aplicação em execução, acesse:
 
