@@ -2,6 +2,7 @@ package com.example.crud.service;
 
 import com.example.crud.dto.UserRequestDTO;
 import com.example.crud.dto.UserResponseDTO;
+import com.example.crud.exception.UserNotFoundException;
 import com.example.crud.model.User;
 import com.example.crud.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -35,14 +36,14 @@ public class UserService {
 
     public UserResponseDTO getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         return toResponseDTO(user);
     }
 
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         user.setName(dto.getName());
 
@@ -53,7 +54,7 @@ public class UserService {
 
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new UserNotFoundException(id));
 
         userRepository.delete(user);
     }

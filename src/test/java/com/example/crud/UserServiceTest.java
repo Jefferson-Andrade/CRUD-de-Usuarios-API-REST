@@ -42,8 +42,8 @@ class UserServiceTest {
 
         UserResponseDTO response = userService.createUser(new UserRequestDTO("Jefferson Andrade"));
 
-        assertThat(response.id()).isEqualTo(1L);
-        assertThat(response.name()).isEqualTo("Jefferson Andrade");
+        assertThat(response.getId()).isEqualTo(1L);
+        assertThat(response.getName()).isEqualTo("Jefferson Andrade");
         verify(userRepository).save(any(User.class));
     }
 
@@ -56,7 +56,7 @@ class UserServiceTest {
 
         UserResponseDTO response = userService.getUserById(1L);
 
-        assertThat(response.name()).isEqualTo("Jefferson Andrade");
+        assertThat(response.getName()).isEqualTo("Jefferson Andrade");
     }
 
     @Test
@@ -77,7 +77,7 @@ class UserServiceTest {
         List<UserResponseDTO> response = userService.getAllUsers();
 
         assertThat(response).hasSize(1);
-        assertThat(response.getFirst().name()).isEqualTo("Jefferson Andrade");
+        assertThat(response.getFirst().getName()).isEqualTo("Jefferson Andrade");
     }
 
     @Test
@@ -91,7 +91,7 @@ class UserServiceTest {
         UserResponseDTO response = userService.updateUser(
                 1L, new UserRequestDTO("Jefferson Atualizado"));
 
-        assertThat(response.name()).isEqualTo("Jefferson Atualizado");
+        assertThat(response.getName()).isEqualTo("Jefferson Atualizado");
         verify(userRepository).save(user);
     }
 
