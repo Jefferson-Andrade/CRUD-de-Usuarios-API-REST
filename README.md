@@ -14,10 +14,10 @@
 | 🗃️ **Spring Data JPA** | Persistência de dados |
 | 🐘 **PostgreSQL 16** | Banco de dados |
 | 🐳 **Docker / Docker Compose** | Containerização do banco |
-| 📖 **OpenAPI / Swagger** | Documentação e testes da API |
+| 📖 **OpenAPI / Swagger** | Documentação interativa e requisições manuais |
 | 🧪 **JUnit 5** | Testes automatizados |
-| 🎭 **Mockito** | Testes unitários |
-| 🗄️ **H2** | Banco em memória para testes |
+| 🎭 **Mockito** | Isolamento das dependências nos testes |
+| 🗄️ **H2** | Banco em memória para o teste de contexto |
 | 📦 **Maven** | Gerenciamento e build |
 | 🔧 **Git / GitHub** | Versionamento |
 
@@ -32,13 +32,13 @@ Este projeto consiste em uma API REST para gerenciamento de usuários, implement
 - ✅ Consulta por ID
 - ✅ Atualização de usuários
 - ✅ Exclusão de usuários
-- ✅ Validação dos dados de entrada
-- ✅ Tratamento global de exceções
+- ✅ Validação de nome obrigatório na criação e atualização
+- ✅ Tratamento centralizado de usuário inexistente e falhas de validação
 - ✅ Persistência com PostgreSQL
 - ✅ Documentação com Swagger / OpenAPI
 - ✅ Testes automatizados
 
-O projeto foi desenvolvido com foco em organização, separação de responsabilidades e aplicação de boas práticas de desenvolvimento backend.
+O projeto foi desenvolvido para praticar a construção de uma API REST com responsabilidades separadas, contratos de entrada e saída definidos por DTOs e testes de service e controller.
 
 ---
 
@@ -90,13 +90,26 @@ Utilizados para controlar os dados de entrada e saída da API, evitando a exposi
 
 ## 🔌 Endpoints
 
-| Método | Endpoint | Descrição | Status |
-|:---:|---|---|:---:|
-| 🟢 **POST** | `/users` | Criar usuário | `201 Created` |
-| 🔵 **GET** | `/users` | Listar usuários | `200 OK` |
-| 🔵 **GET** | `/users/{id}` | Buscar usuário por ID | `200 OK` |
-| 🟡 **PUT** | `/users/{id}` | Atualizar usuário | `200 OK` |
-| 🔴 **DELETE** | `/users/{id}` | Excluir usuário | `204 No Content` |
+| Método | Endpoint | Descrição | Sucesso | Erros tratados |
+|---|---|---|---|---|
+| POST | `/users` | Criar usuário | `201 Created` | `400 Bad Request` por validação |
+| GET | `/users` | Listar usuários | `200 OK` | - |
+| GET | `/users/{id}` | Buscar usuário por ID | `200 OK` | `404 Not Found` |
+| PUT | `/users/{id}` | Atualizar usuário existente | `200 OK` | `400 Bad Request`, `404 Not Found` |
+| DELETE | `/users/{id}` | Excluir usuário | `204 No Content` | `404 Not Found` |
+
+O PUT recebe o ID no caminho e o novo nome no corpo. Se o usuário não existir, retorna 404; não cria um novo registro. O DELETE de um ID inexistente também retorna 404.
+
+A listagem retorna todos os usuários, sem paginação ou ordenação explícita. Quando não há registros, retorna uma lista vazia (`[]`).
+
+### Modelo de dados
+
+A entidade `User` é persistida na tabela `users`. O ID é gerado pelo banco com a estratégia `IDENTITY`.
+
+| Campo | Tipo Java | Uso |
+|---|---|---|
+| `id` | `Long` | Identificador gerado; retornado no DTO de resposta |
+| `name` | `String` | Nome recebido na criação/atualização e retornado na resposta |
 
 ---
 
@@ -182,9 +195,9 @@ Utilizados para controlar os dados de entrada e saída da API, evitando a exposi
 
 ---
 
-# 📸 Demonstração
+## 📸 Demonstração
 
-## Swagger / OpenAPI
+### Swagger / OpenAPI
 
 Documentação interativa da API através do Swagger UI.
 
@@ -192,7 +205,7 @@ Documentação interativa da API através do Swagger UI.
 
 ---
 
-## Criando um usuário
+### Criando um usuário
 
 Exemplo de execução do endpoint `POST /users`.
 
@@ -200,7 +213,7 @@ Exemplo de execução do endpoint `POST /users`.
 
 ---
 
-## Excluindo um usuário
+### Excluindo um usuário
 
 Exemplo de execução do endpoint `DELETE /users/{id}`.
 
@@ -208,15 +221,19 @@ Exemplo de execução do endpoint `DELETE /users/{id}`.
 
 ---
 
-# 📖 Documentação da API
+## 📖 Documentação da API
 
 Com a aplicação em execução:
 
 ### Swagger UI
 
+A entrada configurada no projeto é:
+
 ```text
-http://localhost:8080/swagger-ui/index.html
+http://localhost:8080/swagger-ui.html
 ```
+
+A interface também pode ser acessada em `http://localhost:8080/swagger-ui/index.html`.
 
 ### OpenAPI JSON
 
@@ -224,11 +241,13 @@ http://localhost:8080/swagger-ui/index.html
 http://localhost:8080/v3/api-docs
 ```
 
-O Swagger permite visualizar os endpoints, modelos de dados e executar requisições diretamente pela interface web.
+O Swagger permite visualizar os endpoints e modelos de dados e executar requisições manualmente pela interface web. Essas requisições não substituem os testes automatizados.
+
+A configuração OpenAPI define título, versão e descrição. Os endpoints são descobertos pelo springdoc; o controller ainda não possui anotações específicas detalhando operações e respostas de erro.
 
 ---
 
-# 🗄️ Banco de dados
+## 🗄️ Banco de dados
 
 O projeto utiliza **PostgreSQL 16** para persistência dos usuários.
 
@@ -244,17 +263,21 @@ Port: 5432
 
 A comunicação com o banco é realizada através do **Spring Data JPA**.
 
-O Hibernate gerencia a estrutura da tabela através da configuração:
+As credenciais acima são padrões locais de desenvolvimento. A aplicação se conecta ao banco em `localhost:5432`; o Compose executa apenas o PostgreSQL, enquanto a API é iniciada separadamente pelo Maven.
+
+O Hibernate atualiza a estrutura da tabela através da configuração:
 
 ```properties
 spring.jpa.hibernate.ddl-auto=update
 ```
 
+Essa configuração facilita o desenvolvimento local. O projeto ainda não possui migrações versionadas de banco.
+
 ---
 
-# 🐳 Docker
+## 🐳 Docker
 
-O PostgreSQL é executado utilizando Docker Compose.
+O arquivo `docker-compose.yaml` executa a imagem `postgres:16-alpine`, publica a porta 5432 e utiliza o volume nomeado `postgres_data` para persistir os dados.
 
 ### Iniciar o banco
 
@@ -274,65 +297,90 @@ docker compose ps
 docker compose down
 ```
 
+O comando remove o container e a rede do Compose, mas preserva o volume `postgres_data`. Os dados permanecem disponíveis na próxima inicialização.
+
 ---
 
-# 🧪 Testes automatizados
+## 🧪 Testes automatizados
 
-O projeto possui testes automatizados utilizando:
+A suíte utiliza JUnit 5, Mockito, MockMvc e Spring Boot Test. Existem **13 métodos de teste**, distribuídos assim:
 
-- **JUnit 5**
-- **Mockito**
-- **MockMvc**
-- **Spring Boot Test**
-- **H2**
+| Classe | Quantidade | Escopo |
+|---|---:|---|
+| [UserServiceTest](src/test/java/com/example/crud/UserServiceTest.java) | 6 | Service com repository mockado: criar, buscar, listar, atualizar, excluir e lançar exceção na busca de usuário inexistente |
+| [UserControllerTest](src/test/java/com/example/crud/UserControllerTest.java) | 6 | Camada web com MockMvc e service mockado: os cinco endpoints em sucesso e POST com nome vazio retornando 400 |
+| [CrudApplicationTests](src/test/java/com/example/crud/CrudApplicationTests.java) | 1 | Carregamento do contexto Spring Boot, com H2 em memória configurado em `src/test/resources/application.properties` |
 
-### Cenários testados
+Os testes de service e controller usam mocks e não validam persistência real. O teste de contexto utiliza H2, mas não executa um fluxo completo de CRUD. Não é necessário iniciar PostgreSQL ou Docker para essa suíte.
 
-- Criação de usuário
-- Busca de usuário
-- Listagem de usuários
-- Atualização de usuário
-- Exclusão de usuário
-- Usuário não encontrado
-- Validação dos dados
-- Respostas HTTP
-- Cenários de sucesso e erro
+Ainda não existem testes de integração de CRUD com PostgreSQL, testes do HTTP 404 ou verificações do corpo personalizado dos erros. A validação no PUT e nomes nulos ou compostos apenas de espaços também não possuem testes específicos. Não há relatório de cobertura configurado no projeto.
 
 ### Executar os testes
 
-Windows:
+Windows (PowerShell):
 
-```bash
-mvnw.cmd test
+```powershell
+.\mvnw.cmd test
 ```
 
-Ou:
+Linux/macOS:
 
 ```bash
-mvn test
+./mvnw test
 ```
 
-Os testes utilizam **H2 em memória**, não sendo necessário iniciar o PostgreSQL ou Docker para executá-los.
+Se necessário, conceda permissão de execução ao wrapper: `chmod +x mvnw`.
+
+Com Maven instalado, também é possível usar `mvn test`.
 
 ---
 
-# ✅ Validação e tratamento de exceções
+## ✅ Validação e tratamento de exceções
 
-A API utiliza **Bean Validation** para validar os dados recebidos nas requisições.
+### Regra de entrada
 
-Também possui tratamento global de exceções através de um `GlobalExceptionHandler`.
+O [UserRequestDTO](src/main/java/com/example/crud/dto/UserRequestDTO.java) possui `@NotBlank` em `name`. O [controller](src/main/java/com/example/crud/controller/UserController.java) aplica `@Valid` no POST e no PUT.
 
-Quando um usuário não é encontrado, é lançada uma exceção personalizada:
+O nome é obrigatório: valores ausentes, nulos, vazios ou compostos apenas de espaços são rejeitados com **400 Bad Request**. Não há regras de tamanho, unicidade ou normalização do nome.
 
-```text
-UserNotFoundException
+### Erros personalizados
+
+O [GlobalExceptionHandler](src/main/java/com/example/crud/exception/GlobalExceptionHandler.java) usa `@RestControllerAdvice` para centralizar dois casos:
+
+| Exceção | Status | Comportamento |
+|---|---|---|
+| `UserNotFoundException` | `404 Not Found` | Usuário inexistente na busca, atualização ou exclusão |
+| `MethodArgumentNotValidException` | `400 Bad Request` | Falha de Bean Validation; retorna somente a primeira mensagem de erro de campo |
+
+As respostas desses casos possuem `status`, `error`, `message` e `timestamp`. O timestamp é gerado com `LocalDateTime.now()`, sem offset de fuso horário.
+
+Exemplo ilustrativo de POST ou PUT com `{"name": ""}`:
+
+```json
+{
+  "status": 400,
+  "error": "Bad Request",
+  "message": "O nome é obrigatório",
+  "timestamp": "2026-10-04T12:00:00"
+}
 ```
 
-A aplicação então retorna uma resposta HTTP adequada ao cenário.
+Exemplo ilustrativo de usuário inexistente com ID 99:
+
+```json
+{
+  "status": 404,
+  "error": "Not Found",
+  "message": "Usuário não encontrado: 99",
+  "timestamp": "2026-10-04T12:00:00"
+}
+```
+
+O timestamp varia a cada resposta. JSON malformado, IDs com tipo inválido e falhas de banco não possuem tratamento personalizado nesse handler; não há garantia de que seus erros usem o mesmo formato.
 
 ---
 
-# 📦 DTOs
+## 📦 DTOs
 
 A API utiliza DTOs para separar os dados recebidos e enviados pela aplicação.
 
@@ -361,33 +409,34 @@ Essa abordagem evita expor diretamente a entidade JPA através da API.
 
 ---
 
-# 📁 Estrutura do projeto
+## 📁 Estrutura do projeto
 
 ```text
 CRUD-de-Usuarios-API-REST
-│
+├── .mvn/wrapper/maven-wrapper.properties
 ├── src
 │   ├── main
-│   │   ├── java
-│   │   │   └── com.example.crud
-│   │   │       ├── controller
-│   │   │       ├── dto
-│   │   │       ├── exception
-│   │   │       ├── model
-│   │   │       ├── repository
-│   │   │       └── service
-│   │   │
-│   │   └── resources
-│   │       └── application.properties
-│   │
+│   │   ├── java/com/example/crud
+│   │   │   ├── config/OpenApiConfig.java
+│   │   │   ├── controller/UserController.java
+│   │   │   ├── dto
+│   │   │   │   ├── UserRequestDTO.java
+│   │   │   │   └── UserResponseDTO.java
+│   │   │   ├── exception
+│   │   │   │   ├── GlobalExceptionHandler.java
+│   │   │   │   └── UserNotFoundException.java
+│   │   │   ├── model/User.java
+│   │   │   ├── repository/UserRepository.java
+│   │   │   ├── service/UserService.java
+│   │   │   └── CrudApplication.java
+│   │   └── resources/application.properties
 │   └── test
-│       ├── java
-│       │   └── com.example.crud
-│       │
-│       └── resources
-│           └── application.properties
-│
-├── docker-compose.yml
+│       ├── java/com/example/crud
+│       │   ├── CrudApplicationTests.java
+│       │   ├── UserControllerTest.java
+│       │   └── UserServiceTest.java
+│       └── resources/application.properties
+├── docker-compose.yaml
 ├── pom.xml
 ├── mvnw
 ├── mvnw.cmd
@@ -396,15 +445,18 @@ CRUD-de-Usuarios-API-REST
 
 ---
 
-# ▶️ Como executar
+## ▶️ Como executar
 
-## Pré-requisitos
+### Pré-requisitos
 
-- Java 21
-- Docker Desktop
+- JDK 21
+- Docker e Docker Compose (por exemplo, via Docker Desktop)
 - Git
+- Acesso à internet para baixar as dependências na primeira execução
 
-## 1. Clone o repositório
+O Maven Wrapper está incluído. Não é necessário instalar Maven para usar `mvnw` ou `mvnw.cmd`; os comandos com `mvn` exigem Maven instalado.
+
+### 1. Clone o repositório
 
 ```bash
 git clone https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST.git
@@ -416,21 +468,31 @@ Entre na pasta:
 cd CRUD-de-Usuarios-API-REST
 ```
 
-## 2. Inicie o PostgreSQL
+### 2. Inicie o PostgreSQL
 
 ```bash
 docker compose up -d
 ```
 
-## 3. Execute a aplicação
+Aguarde o banco estar pronto para aceitar conexões. Se a API falhar por conexão recusada, consulte `docker compose logs db` e tente novamente após a inicialização. As portas 5432 (banco) e 8080 (API) precisam estar disponíveis.
 
-No Windows:
+### 3. Execute a aplicação
 
-```bash
-mvnw.cmd spring-boot:run
+Windows (PowerShell):
+
+```powershell
+.\mvnw.cmd spring-boot:run
 ```
 
-Ou:
+Linux/macOS:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Se necessário: `chmod +x mvnw`.
+
+Alternativa com Maven instalado:
 
 ```bash
 mvn spring-boot:run
@@ -442,37 +504,40 @@ A aplicação será executada em:
 http://localhost:8080
 ```
 
-## 4. Acesse o Swagger
+### 4. Acesse o Swagger
 
 ```text
-http://localhost:8080/swagger-ui/index.html
+http://localhost:8080/swagger-ui.html
 ```
 
 ---
 
-# 💡 Boas práticas aplicadas
+## 💡 Decisões de implementação
 
-- Arquitetura em camadas
-- Separação de responsabilidades
-- DTOs para entrada e saída
-- Injeção de dependências por construtor
-- Bean Validation
-- Tratamento global de exceções
-- Exceção personalizada
-- Status HTTP adequados
-- Spring Data JPA
-- PostgreSQL
-- Docker Compose
-- Testes unitários
-- Testes Web com MockMvc
-- H2 para testes
-- OpenAPI / Swagger
-- Maven
-- Git / GitHub
+- **Camadas:** controller recebe HTTP, service executa o CRUD e converte entidades em DTOs, repository acessa o banco via Spring Data JPA.
+- **DTOs:** `UserRequestDTO` define a entrada e `UserResponseDTO` define a saída, evitando retornar a entidade JPA diretamente.
+- **Injeção por construtor:** controller e service recebem suas dependências explicitamente, facilitando testes isolados.
+- **Validação:** `@NotBlank` no DTO e `@Valid` no controller rejeitam nomes em branco antes de chamar o service.
+- **Erros centralizados:** o handler personaliza os retornos 400 por validação e 404 por usuário inexistente.
+- **Testes com mocks:** permitem verificar service e camada web separadamente, com H2 reservado ao carregamento do contexto.
+- **Ambiente local:** Compose disponibiliza PostgreSQL com volume persistente; OpenAPI oferece documentação interativa.
+
+## Limitações e próximos passos
+
+A API atualmente não possui autenticação/autorização, paginação, filtros ou ordenação explícita. O banco utiliza credenciais locais padrão e `ddl-auto=update`, sem migrações versionadas. Não há pipeline de CI/CD no repositório.
+
+Evoluções propostas:
+
+- Testar HTTP 404, o formato dos erros e os demais casos de validação.
+- Adicionar testes de integração com PostgreSQL, por exemplo com Testcontainers.
+- Versionar mudanças de esquema com uma ferramenta de migração.
+- Documentar configuração por ambiente e remover a dependência dos valores locais padrão.
+- Adicionar paginação, autenticação e um pipeline de CI para executar os testes.
+- Detalhar respostas de sucesso e erro no OpenAPI.
 
 ---
 
-# 🎯 Objetivo
+## 🎯 Objetivo
 
 Projeto desenvolvido como parte do meu processo de aprendizado em **Java Backend**, com foco na construção de APIs REST utilizando **Java, Spring Boot, Spring Data JPA e PostgreSQL**.
 
@@ -480,7 +545,7 @@ O projeto também foi utilizado para colocar em prática conceitos de arquitetur
 
 ---
 
-# 👨‍💻 Autor
+## 👨‍💻 Autor
 
 **Jefferson Andrade**
 
