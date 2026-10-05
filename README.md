@@ -15,9 +15,11 @@
 | 🐘 **PostgreSQL 16** | Banco de dados |
 | 🐳 **Docker / Docker Compose** | Containerização do banco |
 | 📖 **OpenAPI / Swagger** | Documentação e testes da API |
-| 🧪 **JUnit 5** | Testes automatizados |
+| 🧪 **JUnit Jupiter** | Testes automatizados |
 | 🎭 **Mockito** | Testes unitários |
-| 🗄️ **H2** | Banco em memória para testes |
+| 🗄️ **H2** | Banco em memória para o teste de contexto |
+| 🧰 **Testcontainers** | PostgreSQL temporário nos testes de integração |
+| ✅ **Maven Failsafe** | Execução e verificação dos testes de integração |
 | 📦 **Maven** | Gerenciamento e build |
 | 🔧 **Git / GitHub** | Versionamento |
 
@@ -37,6 +39,7 @@ Este projeto consiste em uma API REST para gerenciamento de usuários, implement
 - ✅ Persistência com PostgreSQL
 - ✅ Documentação com Swagger / OpenAPI
 - ✅ Testes automatizados
+- ✅ Testes de integração com PostgreSQL real e Testcontainers
 
 O projeto foi desenvolvido com foco em organização, separação de responsabilidades e aplicação de boas práticas de desenvolvimento backend.
 
@@ -278,41 +281,73 @@ docker compose down
 
 # 🧪 Testes automatizados
 
-O projeto possui testes automatizados utilizando:
+A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test**, **H2** e **Testcontainers**. Os testes com mocks verificam comportamentos isolados; os testes de integração percorrem as camadas da aplicação e verificam a persistência em PostgreSQL real.
 
-- **JUnit 5**
-- **Mockito**
-- **MockMvc**
-- **Spring Boot Test**
-- **H2**
+### Organização da suíte
 
-### Cenários testados
+| Classe | Tipo | O que verifica | Testes |
+|---|---|---|:---:|
+| `UserServiceTest` | Unitário, com repository mockado | Criação, consulta, listagem, atualização, exclusão e exceção para usuário inexistente | 6 |
+| `UserControllerTest` | Web, com service mockado | Os cinco endpoints em sucesso e rejeição de nome vazio no POST com `400` | 6 |
+| `CrudApplicationTests` | Contexto, com H2 em memória | Carregamento da aplicação | 1 |
+| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | Criação, consulta, listagem, atualização e exclusão com verificação direta no banco | 3 |
+| **Total** | | | **16** |
 
-- Criação de usuário
-- Busca de usuário
-- Listagem de usuários
-- Atualização de usuário
-- Exclusão de usuário
-- Usuário não encontrado
-- Validação dos dados
-- Respostas HTTP
-- Cenários de sucesso e erro
+### Executar os testes sem Docker
 
-### Executar os testes
+Windows (PowerShell):
 
-Windows:
-
-```bash
-mvnw.cmd test
+```powershell
+.\mvnw.cmd test
 ```
 
-Ou:
+Linux/macOS:
 
 ```bash
-mvn test
+./mvnw test
 ```
 
-Os testes utilizam **H2 em memória**, não sendo necessário iniciar o PostgreSQL ou Docker para executá-los.
+Esses comandos executam **13 testes**: os testes de serviço e de controller com mocks e o teste de contexto com H2. Não exigem PostgreSQL ou Docker.
+
+### Executar a suíte completa com PostgreSQL
+
+Pré-requisitos: Java 21 e Docker acessível. No Windows, mantenha o Docker Desktop em execução com containers Linux.
+
+Windows (PowerShell):
+
+```powershell
+.\mvnw.cmd -Pintegration verify
+```
+
+Linux/macOS:
+
+```bash
+./mvnw -Pintegration verify
+```
+
+O perfil `integration` executa os 13 testes existentes e os 3 testes `UserPostgresIT`, totalizando **16 testes**. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+
+Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
+
+### Cenários de integração verificados
+
+- **Criação, consulta e listagem:** POST retorna `201` e um ID gerado; consultas SQL conferem o nome e a quantidade de registros; GET por ID e listagem retornam os dados salvos.
+- **Atualização:** PUT retorna `200`, mantém o ID e altera o nome; uma consulta SQL e um novo GET confirmam a alteração persistida, sem criar outro usuário.
+- **Exclusão:** DELETE retorna `204` com corpo vazio; uma consulta SQL confirma a remoção; GET posterior retorna `404` com os campos de erro esperados, e a listagem fica vazia.
+
+As requisições usam MockMvc com a aplicação completa, passando por **controller → service → repository → PostgreSQL**. Não há mocks nem uma transação de teste envolvendo as requisições; as consultas SQL verificam as gravações confirmadas no banco.
+
+Os dados são limpos antes de cada teste. O PostgreSQL é declarado como um bean de teste com `@ServiceConnection`, que fornece os dados de conexão ao Spring Boot. Ao final da classe, o Spring encerra a aplicação e as conexões antes de parar o container.
+
+### Resultado validado
+
+Na execução de **05/10/2026**, a suíte completa terminou com **`BUILD SUCCESS`**:
+
+- **13 testes existentes:** nenhuma falha, erro ou teste ignorado.
+- **3 testes de integração com PostgreSQL:** nenhuma falha, erro ou teste ignorado.
+- Encerramento normal das conexões, sem o erro anterior de finalização do processo.
+
+Os relatórios ficam em `target/surefire-reports` para os testes existentes e em `target/failsafe-reports` para os testes de integração.
 
 ---
 
@@ -383,11 +418,15 @@ CRUD-de-Usuarios-API-REST
 │   └── test
 │       ├── java
 │       │   └── com.example.crud
+│       │       ├── CrudApplicationTests.java
+│       │       ├── UserControllerTest.java
+│       │       ├── UserServiceTest.java
+│       │       └── UserPostgresIT.java
 │       │
 │       └── resources
 │           └── application.properties
 │
-├── docker-compose.yml
+├── docker-compose.yaml
 ├── pom.xml
 ├── mvnw
 ├── mvnw.cmd
@@ -427,7 +466,7 @@ docker compose up -d
 No Windows:
 
 ```bash
-mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
 
 Ou:
@@ -465,7 +504,10 @@ http://localhost:8080/swagger-ui/index.html
 - Docker Compose
 - Testes unitários
 - Testes Web com MockMvc
-- H2 para testes
+- H2 para o teste de contexto
+- Testes de integração com PostgreSQL real
+- Testcontainers com banco temporário e isolado
+- Ciclo de vida do banco gerenciado pelo Spring Boot
 - OpenAPI / Swagger
 - Maven
 - Git / GitHub
