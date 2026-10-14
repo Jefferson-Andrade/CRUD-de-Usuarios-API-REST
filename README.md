@@ -1,5 +1,7 @@
 # 🚀 CRUD de Usuários — API REST
 
+[![CI - Testes do CRUD](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml)
+
 > API REST para gerenciamento de usuários, desenvolvida com **Java 21** e **Spring Boot 4.1.1**, aplicando conceitos de desenvolvimento backend, arquitetura em camadas, DTOs, validação, persistência de dados e testes automatizados.
 
 ---
@@ -348,6 +350,34 @@ Na execução de **05/10/2026**, a suíte completa terminou com **`BUILD SUCCESS
 - Encerramento normal das conexões, sem o erro anterior de finalização do processo.
 
 Os relatórios ficam em `target/surefire-reports` para os testes existentes e em `target/failsafe-reports` para os testes de integração.
+
+---
+
+### Integração contínua com GitHub Actions
+
+O workflow [CI - Testes do CRUD](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml), definido em `.github/workflows/ci.yml`, executa a suíte completa:
+
+- A cada push na branch `master`.
+- Em pull requests destinados à `master`.
+- Manualmente pela aba **Actions → CI - Testes do CRUD → Run workflow**.
+
+O job **Testes do CRUD** utiliza Ubuntu, Java 21 Temurin, cache de dependências Maven e Docker para Testcontainers. Ele compila, executa os testes convencionais e os testes de integração com PostgreSQL temporário usando:
+
+```bash
+bash ./mvnw -B -ntp -Pintegration verify
+```
+
+No Windows (PowerShell), o comando equivalente é:
+
+```powershell
+.\mvnw.cmd -B -ntp -Pintegration verify
+```
+
+Não é necessário iniciar o PostgreSQL com Docker Compose para essa suíte. Uma falha de compilação, de teste ou de infraestrutura deixa o job com status de falha.
+
+Os relatórios Surefire e Failsafe produzidos são enviados como o artefato **relatorios-testes-crud**, mesmo quando os testes falham, e ficam disponíveis por **14 dias**. Se a execução falhar antes de gerar relatórios, consulte os logs das etapas. Para conferir o resultado, abra a execução na aba **Actions** e baixe o artefato.
+
+A suíte possui **16 testes no commit de referência `1a934d2`**. Conforme novos cenários forem adicionados, a quantidade pode crescer; a validação deve confirmar que os testes convencionais e de integração previstos foram executados, sem falhas, erros ou testes ignorados.
 
 ---
 
