@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="650" viewBox="0 0 1100 650" role="img" aria-labelledby="title desc">
+<title id="title">Arquitetura do CRUD de Usuários</title>
+<desc id="desc">Requisições HTTP com DTOs passam por Controller, Service e Repository até o PostgreSQL. Flyway aplica migrações SQL e Hibernate valida o schema.</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#007f8b" stroke-width="1.5"/></marker></defs>
+<rect width="1100" height="650" rx="24" fill="#f3f7fb"/>
+<text x="52" y="58" font-family="Arial,sans-serif" font-size="29" font-weight="700" fill="#10263e">CRUD de Usuários | Arquitetura</text>
+<text x="52" y="90" font-family="Arial,sans-serif" font-size="18" fill="#4b5b6c">Java 21 · Spring Boot · PostgreSQL</text>
+<g font-family="Arial,sans-serif">
+<text x="377" y="136" text-anchor="middle" font-size="16" fill="#4b5b6c">HTTP · DTOs de entrada e saída</text>
+<g fill="#10263e"><rect x="250" y="158" width="255" height="66" rx="12"/><rect x="250" y="266" width="255" height="66" rx="12"/><rect x="250" y="374" width="255" height="66" rx="12"/><rect x="250" y="482" width="255" height="74" rx="12"/></g>
+<g fill="white" text-anchor="middle" font-size="22" font-weight="700"><text x="377" y="199">Controller</text><text x="377" y="307">Service</text><text x="377" y="415">Repository</text><text x="377" y="527">PostgreSQL</text></g>
+<g stroke="#007f8b" stroke-width="3" marker-end="url(#arrow)"><path d="M377 224V255"/><path d="M377 332V363"/><path d="M377 440V471"/></g>
+<g font-size="18" fill="#10263e"><text x="550" y="184">Recebe requisições e valida DTOs</text><text x="550" y="212" fill="#4b5b6c">Retorna respostas e status HTTP</text><text x="550" y="292">Executa as operações da aplicação</text><text x="550" y="320" fill="#4b5b6c">Converte entidades e DTOs</text><text x="550" y="400">Acessa os dados com Spring Data JPA</text><text x="550" y="428" fill="#4b5b6c">Hibernate faz o mapeamento ORM</text><text x="550" y="513">Persiste usuários e histórico do Flyway</text><text x="550" y="541" fill="#4b5b6c">Hibernate valida o schema na inicialização</text></g>
+<rect x="42" y="482" width="160" height="74" rx="12" fill="#007f8b"/><text x="122" y="514" text-anchor="middle" font-size="21" font-weight="700" fill="white">Flyway</text><text x="122" y="539" text-anchor="middle" font-size="15" fill="white">Migrações SQL</text>
+<path d="M202 519H239" fill="none" stroke="#007f8b" stroke-width="3" marker-end="url(#arrow)"/>
+<text x="52" y="610" font-size="16" fill="#4b5b6c">Flyway cria e evolui a estrutura; Hibernate usa ddl-auto=validate.</text></g></svg>

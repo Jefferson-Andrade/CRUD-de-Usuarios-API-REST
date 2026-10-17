@@ -53,31 +53,7 @@ O projeto foi desenvolvido com foco em organização, separação de responsabil
 
 A aplicação utiliza uma arquitetura em camadas:
 
-```text
-                    ┌──────────────────┐
-                    │   HTTP Request   │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │   Controller     │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │     Service      │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │    Repository    │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │    PostgreSQL    │
-                    └──────────────────┘
-```
+![Arquitetura do CRUD: Controller, Service, Repository e PostgreSQL, com migrações Flyway](docs/images/arquitetura-crud.svg)
 
 ### Camadas
 
@@ -251,6 +227,16 @@ Port: 5432
 
 A comunicação com o banco é realizada através do **Spring Data JPA**.
 
+### Migrações com Flyway
+
+<p align="center">
+  <img src="docs/images/flyway.jpg" alt="Ilustração da evolução do CRUD com Flyway, Hibernate em validate e 18 testes aprovados" width="640" />
+</p>
+
+*Ilustração da melhoria implementada. A migração disponível é a V1; V2 e V3 representam evoluções futuras. A validação dos 18 testes foi realizada em PostgreSQL temporário, sem aplicar baseline no banco local.*
+
+[Ver execução aprovada no GitHub Actions](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/39037493707).
+
 O **Flyway** cria e evolui a estrutura através de scripts em `src/main/resources/db/migration`. O Hibernate apenas valida o mapeamento das entidades:
 
 ```properties
@@ -289,7 +275,7 @@ Guarde esse backup fora do repositório. Não sobrescreva um backup anterior; us
 ```powershell
 docker compose exec db createdb -U postgres crud_flyway_check
 docker compose exec db pg_restore -U postgres -d crud_flyway_check --no-owner --exit-on-error /tmp/crud_before_flyway.dump
-docker compose exec db psql -U postgres -d crud_flyway_check -c "\\d+ public.users"
+docker compose exec db psql -U postgres -d crud_flyway_check -c "\d+ public.users"
 docker compose exec db psql -U postgres -d crud_flyway_check -c "SELECT id, name FROM public.users ORDER BY id;"
 ```
 
@@ -306,7 +292,7 @@ Remove-Item Env:FLYWAY_PASSWORD
 Inicie a aplicação contra a cópia, sem alterar a conexão padrão do projeto:
 
 ```powershell
-.\\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5432/crud_flyway_check"
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.datasource.url=jdbc:postgresql://localhost:5432/crud_flyway_check"
 ```
 
 Confira `flyway_schema_history` nessa cópia: versão `1`, tipo `BASELINE`, sucesso. A V1 não será executada sobre a tabela existente. Confira IDs, nomes, contagem e geração de novos IDs, exercite o CRUD e reinicie a aplicação. Compare os registros anteriores antes de aceitar a adoção.
