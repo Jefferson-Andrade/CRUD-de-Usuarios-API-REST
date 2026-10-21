@@ -76,7 +76,7 @@ Utilizados para controlar os dados de entrada e saída da API, evitando a exposi
 | Método | Endpoint | Descrição | Status |
 |:---:|---|---|:---:|
 | 🟢 **POST** | `/users` | Criar usuário | `201 Created` |
-| 🔵 **GET** | `/users` | Listar usuários | `200 OK` |
+| 🔵 **GET** | `/users` | Listar usuários com paginação, ordenação e busca por nome | `200 OK` |
 | 🔵 **GET** | `/users/{id}` | Buscar usuário por ID | `200 OK` |
 | 🟡 **PUT** | `/users/{id}` | Atualizar usuário | `200 OK` |
 | 🔴 **DELETE** | `/users/{id}` | Excluir usuário | `204 No Content` |
@@ -140,18 +140,60 @@ Utilizados para controlar os dados de entrada e saída da API, evitando a exposi
 
 ---
 
-### Listar usuários
+### Listar usuários: paginação, ordenação e busca
 
-**GET `/users`**
+**Mudança de contrato:** `GET /users` retorna um objeto com `content` e metadados, inclusive sem parâmetros. Antes retornava um array na raiz. Consumidores devem passar a ler `response.content`. POST, GET por ID, PUT e DELETE mantêm seus contratos. Não existe listagem ilimitada alternativa.
+
+| Parâmetro | Padrão | Regra |
+|---|---|---|
+| `page` | `0` | Inteiro a partir de zero |
+| `size` | `10` | Inteiro de 1 a 100 |
+| `sort` | `id,asc` | Um único par: `id,asc`, `id,desc`, `name,asc` ou `name,desc` |
+| `name` | Sem filtro | Até 255 caracteres recebidos; espaços nas pontas são removidos; vazio não filtra |
+
+A busca é parcial e ignora maiúsculas/minúsculas, sem remover acentos. Os caracteres `%` e `_` são tratados literalmente pela consulta derivada do Spring Data JPA. A ordenação por nome usa ID como desempate **na mesma direção**: `name,asc` usa `name ASC, id ASC`; `name,desc` usa `name DESC, id DESC`.
+
+Exemplos:
+
+```http
+GET /users
+GET /users?page=0&size=2&sort=name,asc
+GET /users?name=Jefferson&page=0&size=10
+GET /users?page=1&size=5&sort=id,desc
+```
+
+Para uma base com Ana, Bruno e Carla, em ordem de ID, `GET /users?page=0&size=2` retorna:
 
 ```json
-[
-  {
-    "id": 1,
-    "name": "Jefferson Andrade"
-  }
-]
+{
+  "content": [
+    {
+      "id": 1,
+      "name": "Ana"
+    },
+    {
+      "id": 2,
+      "name": "Bruno"
+    }
+  ],
+  "page": 0,
+  "size": 2,
+  "totalElements": 3,
+  "totalPages": 2,
+  "first": true,
+  "last": false
+}
 ```
+
+Os totais refletem o filtro. Sem resultados, retorna HTTP 200 com `content: []`, `totalElements: 0` e `totalPages: 0`. Uma página além da última também retorna 200 e conteúdo vazio, preservando os totais reais. `first` indica índice zero e `last` indica ausência de página seguinte.
+
+Retorna **400 Bad Request**, no padrão `status`, `error`, `message` e `timestamp`, para página negativa, tamanho fora da faixa, números inválidos ou fora do intervalo de um inteiro Java, offset (`page × size`) acima de 2.147.483.647 (limite do JPA), parâmetros de paginação vazios, filtro acima de 255 caracteres e sort inválido ou repetido. Exemplos inválidos: `size=101`, `page=abc`, `sort=email,asc` e `sort=name,asc&sort=id,desc`. A validação ocorre antes da criação do Pageable; falhas inesperadas não são convertidas em 400.
+
+A paginação e o filtro são executados pelo PostgreSQL através de `findAll(Pageable)` ou `findByNameContainingIgnoreCase(name, pageable)`. A aplicação converte somente os resultados da página para DTOs e usa `PageResponseDTO` como contrato público, sem expor a serialização interna de `PageImpl`.
+
+Esta melhoria não altera a tabela nem a migração V1. Busca parcial e contagem de totais ainda podem percorrer muitos registros; medir antes de propor índices. Paginação por offset não fornece um snapshot: inserções, alterações ou exclusões concorrentes podem mudar a composição das páginas entre requisições.
+
+Referência: [Spring Data JPA — Query Methods](https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html).
 
 ---
 
@@ -335,11 +377,11 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 
 | Classe | Tipo | O que verifica | Testes |
 |---|---|---|:---:|
-| `UserServiceTest` | Unitário, com repository mockado | Criação, consulta, listagem, atualização, exclusão e exceção para usuário inexistente | 6 |
-| `UserControllerTest` | Web, com service mockado | Os cinco endpoints em sucesso e rejeição de nome vazio no POST com `400` | 6 |
+| `UserServiceTest` | Unitário, com repository mockado | CRUD, filtro normalizado, seleção da consulta paginada, conversão dos DTOs e metadados | 9 |
+| `UserControllerTest` | Web, com service mockado | CRUD, padrões e parâmetros de listagem, limites, erros 400 e falhas inesperadas | 30 |
 | `CrudApplicationTests` | Contexto, com H2 em memória | Carregamento da aplicação | 1 |
-| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, migração V1, nova execução sem reaplicação e baseline preservando dados | 5 |
-| **Total** | | | **18** |
+| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, paginação, busca, ordenação, OpenAPI e regressão de Flyway | 12 |
+| **Total** | | | **52** |
 
 ### Executar os testes sem Docker
 
@@ -355,7 +397,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **13 testes**: os testes de serviço e de controller com mocks e o teste de contexto com H2. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **40 testes**: os testes de serviço e de controller com mocks e o teste de contexto com H2. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -373,11 +415,14 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` executa os 13 testes existentes e os 5 testes `UserPostgresIT`, totalizando **18 testes**. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` executa os 40 testes convencionais e os 12 testes `UserPostgresIT`, totalizando **52 testes**. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
 
 ### Cenários de integração
+
+- **Paginação e busca:** primeira/segunda página sem sobreposição, totais filtrados, página além do fim, filtro parcial sem diferenciar caixa, filtros vazios e sem resultados, ordenação asc/desc com desempate por ID e busca literal por `%` e `_`.
+- **OpenAPI:** contrato paginado, parâmetros e limites conferidos no documento gerado em `/v3/api-docs`.
 
 - **Criação, consulta e listagem:** POST retorna `201` e um ID gerado; consultas SQL conferem o nome e a quantidade de registros; GET por ID e listagem retornam os dados salvos.
 - **Atualização:** PUT retorna `200`, mantém o ID e altera o nome; uma consulta SQL e um novo GET confirmam a alteração persistida, sem criar outro usuário.
@@ -426,7 +471,7 @@ Não é necessário iniciar o PostgreSQL com Docker Compose para essa suíte. Um
 
 Os relatórios Surefire e Failsafe produzidos são enviados como o artefato **relatorios-testes-crud**, mesmo quando os testes falham, e ficam disponíveis por **14 dias**. Se a execução falhar antes de gerar relatórios, consulte os logs das etapas. Para conferir o resultado, abra a execução na aba **Actions** e baixe o artefato.
 
-A suíte possuía **16 testes no commit de referência `1a934d2`**. Com os dois cenários do Flyway, são previstos **18 testes** (13 convencionais e 5 de integração). Confira a execução correspondente ao commit na aba Actions. Conforme novos cenários forem adicionados, a quantidade pode crescer; a validação deve confirmar que os testes convencionais e de integração previstos foram executados, sem falhas, erros ou testes ignorados.
+A suíte atual possui **52 testes** (40 convencionais e 12 de integração), validados localmente em 21/10/2026 com `BUILD SUCCESS`, sem falhas, erros ou testes ignorados. O workflow executa os mesmos comandos; confira o status do commit correspondente na aba Actions. Historicamente, eram 16 testes no commit `1a934d2` e 18 após a integração inicial do Flyway. Conforme novos cenários forem adicionados, atualize a quantidade a partir dos relatórios reais.
 
 ---
 

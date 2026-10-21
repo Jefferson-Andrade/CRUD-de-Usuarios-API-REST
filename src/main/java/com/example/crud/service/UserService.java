@@ -7,7 +7,9 @@ import com.example.crud.model.User;
 import com.example.crud.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import com.example.crud.dto.PageResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class UserService {
@@ -27,11 +29,12 @@ public class UserService {
         return toResponseDTO(savedUser);
     }
 
-    public List<UserResponseDTO> getAllUsers() {
-        return ((List<User>) userRepository.findAll())
-                .stream()
-                .map(this::toResponseDTO)
-                .toList();
+    public PageResponseDTO<UserResponseDTO> getAllUsers(String name, Pageable pageable) {
+        String normalizedName = name == null ? "" : name.strip();
+        Page<User> users = normalizedName.isBlank()
+                ? userRepository.findAll(pageable)
+                : userRepository.findByNameContainingIgnoreCase(normalizedName, pageable);
+        return PageResponseDTO.from(users.map(this::toResponseDTO));
     }
 
     public UserResponseDTO getUserById(Long id) {

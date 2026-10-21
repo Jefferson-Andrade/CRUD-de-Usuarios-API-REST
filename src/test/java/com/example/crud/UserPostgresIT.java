@@ -75,9 +75,9 @@ class UserPostgresIT {
 
         mockMvc.perform(get("/users"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").value(id))
-                .andExpect(jsonPath("$[0].name").value("Jefferson Andrade"));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(id))
+                .andExpect(jsonPath("$.content[0].name").value("Jefferson Andrade"));
     }
 
     @Test
@@ -118,7 +118,9 @@ class UserPostgresIT {
 
         mockMvc.perform(get("/users"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
     }
 
     @Test
@@ -176,6 +178,154 @@ class UserPostgresIT {
         } finally {
             jdbc.execute("DROP SCHEMA legacy_adoption CASCADE");
         }
+    }
+
+    @Test
+    void shouldPaginateInDatabaseWithoutOverlapAndKeepTotalsBeyondEnd() throws Exception {
+        long ana = insertUser("Ana");
+        long bruno = insertUser("Bruno");
+        long carla = insertUser("Carla");
+        mockMvc.perform(get("/users").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].id").value(ana))
+                .andExpect(jsonPath("$.content[1].id").value(bruno))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(false));
+        mockMvc.perform(get("/users").param("page", "1").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(carla))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.first").value(false))
+                .andExpect(jsonPath("$.last").value(true));
+        mockMvc.perform(get("/users").param("page", "2").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2));
+    }
+
+    @Test
+    void shouldSearchPartialNameIgnoringCaseAndTrimmingEdges() throws Exception {
+        long first = insertUser("Jefferson");
+        insertUser("Ana");
+        long second = insertUser("Maria JEFFERSON Andrade");
+        mockMvc.perform(get("/users").param("name", "  jEfF  ").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(first))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(2));
+        mockMvc.perform(get("/users").param("name", "  jEfF  ").param("size", "1").param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(second))
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void shouldUseIdToBreakNameTiesInBothDirections() throws Exception {
+        long firstAna = insertUser("Ana");
+        long bruno = insertUser("Bruno");
+        long secondAna = insertUser("Ana");
+        mockMvc.perform(get("/users").param("sort", "name,asc").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(firstAna));
+        mockMvc.perform(get("/users").param("sort", "name,asc").param("size", "1").param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(secondAna));
+        mockMvc.perform(get("/users").param("sort", "name,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(bruno))
+                .andExpect(jsonPath("$.content[1].id").value(secondAna))
+                .andExpect(jsonPath("$.content[2].id").value(firstAna));
+        mockMvc.perform(get("/users").param("sort", "id,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(secondAna))
+                .andExpect(jsonPath("$.content[1].id").value(bruno))
+                .andExpect(jsonPath("$.content[2].id").value(firstAna));
+    }
+
+    @Test
+    void shouldTreatEmptyAndWhitespaceFilterAsUnfiltered() throws Exception {
+        insertUser("Ana");
+        insertUser("Bruno");
+        for (String name : new String[]{"", "   "}) {
+            mockMvc.perform(get("/users").param("name", name))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.totalElements").value(2));
+        }
+    }
+
+    @Test
+    void shouldReturnEmptyPageForUnmatchedFilterAndEmptyDatabase() throws Exception {
+        mockMvc.perform(get("/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(true));
+        insertUser("Ana");
+        mockMvc.perform(get("/users").param("name", "inexistente"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
+    }
+
+    @Test
+    void shouldEscapeLikeWildcardsInNameFilter() throws Exception {
+        long percent = insertUser("Ana 100%");
+        long underscore = insertUser("Ana_Clara");
+        insertUser("Ana Clara");
+        mockMvc.perform(get("/users").param("name", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(percent))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mockMvc.perform(get("/users").param("name", "_"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(underscore))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void shouldDocumentPagedContractAndQueryLimitsInOpenApi() throws Exception {
+        String json = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var document = objectMapper.readTree(json);
+        var operation = document.get("paths").get("/users").get("get");
+        var schema = operation.get("responses").get("200").get("content")
+                .get("application/json").get("schema");
+        String reference = schema.get("$ref").asText();
+        var properties = document.get("components").get("schemas")
+                .get(reference.substring(reference.lastIndexOf('/') + 1)).get("properties");
+        for (String property : new String[]{"content", "page", "size", "totalElements", "totalPages", "first", "last"}) {
+            assertTrue(properties.has(property), property);
+        }
+        int documentedParameters = 0;
+        for (var parameter : operation.get("parameters")) {
+            String name = parameter.get("name").asText();
+            var definition = parameter.get("schema");
+            switch (name) {
+                case "page" -> { assertEquals(0, definition.get("minimum").asInt()); documentedParameters++; }
+                case "size" -> { assertEquals(100, definition.get("maximum").asInt()); documentedParameters++; }
+                case "sort" -> { assertEquals("id,asc", definition.get("default").asText()); documentedParameters++; }
+                case "name" -> { assertEquals(255, definition.get("maxLength").asInt()); documentedParameters++; }
+                default -> fail("Unexpected API parameter: " + name);
+            }
+        }
+        assertEquals(4, documentedParameters);
+        assertTrue(operation.get("responses").has("400"));
+    }
+
+    private long insertUser(String name) {
+        return jdbc.queryForObject("INSERT INTO users (name) VALUES (?) RETURNING id", Long.class, name);
     }
 
     private long createUser() throws Exception {
