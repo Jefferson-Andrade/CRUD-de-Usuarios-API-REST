@@ -383,7 +383,7 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, paginação, busca, ordenação, OpenAPI, Flyway e integridade de escritas inválidas | 15 |
 | `UserValidationTest` | Web, com service mockado | Limites POST/PUT, corpos inválidos, contrato 400/404, timestamp e falhas inesperadas | 29 |
 | `UserOpenApiTest` | Aplicação completa com H2 | Schemas de validação e de respostas de erro no OpenAPI | 1 |
-| **Total previsto** | | | **85** |
+| **Total** | | | **85** |
 
 ### Executar os testes sem Docker
 
@@ -473,7 +473,7 @@ Não é necessário iniciar o PostgreSQL com Docker Compose para essa suíte. Um
 
 Os relatórios Surefire e Failsafe produzidos são enviados como o artefato **relatorios-testes-crud**, mesmo quando os testes falham, e ficam disponíveis por **14 dias**. Se a execução falhar antes de gerar relatórios, consulte os logs das etapas. Para conferir o resultado, abra a execução na aba **Actions** e baixe o artefato.
 
-Em 24/10/2026, `mvn test` executou **70 testes, sem falhas, erros ou testes ignorados**, com Java 21. A validação completa dos **15 testes PostgreSQL** depende de acesso ao Docker; não considerar os 85 testes aprovados até conferir `verify` e os relatórios do CI. O commit anterior `76d1c07` registrava 52 testes aprovados; os novos cenários ainda precisam da verificação PostgreSQL. Consulte a execução correspondente ao commit na aba Actions.
+Em 24/10/2026, a suíte sem Docker passou com Java 21. No projeto local do usuário, o commit `84d51ab` foi validado com `mvnw.cmd -Pintegration verify`: **70 testes convencionais e 15 de integração PostgreSQL, totalizando 85 testes, sem falhas, erros ou testes ignorados**. Resultado conferido nos relatórios Surefire e Failsafe gerados às 12:59. O commit anterior `76d1c07` registrava 52 testes. A validação local não substitui o CI: consulte a execução correspondente ao commit na aba Actions.
 
 ---
 
