@@ -8,20 +8,24 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import com.example.crud.dto.ErrorResponseDTO;
+import java.util.Comparator;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(UserNotFoundException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleNotFound(UserNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
+                .sorted(Comparator.comparing(org.springframework.validation.FieldError::getField)
+                        .thenComparing(error -> String.valueOf(error.getCode()))
+                        .thenComparing(error -> String.valueOf(error.getDefaultMessage())))
                 .findFirst()
                 .map(error -> error.getDefaultMessage())
                 .orElse("Dados inválidos");
@@ -30,21 +34,22 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(InvalidUserQueryException.class)
-    public ResponseEntity<Map<String, Object>> handleInvalidQuery(InvalidUserQueryException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleInvalidQuery(InvalidUserQueryException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<Map<String, Object>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, "Parâmetro '" + ex.getName() + "' inválido: informe um número inteiro válido");
     }
 
-    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", status.value());
-        body.put("error", status.getReasonPhrase());
-        body.put("message", message);
-        body.put("timestamp", LocalDateTime.now());
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Corpo da requisição ausente ou JSON inválido");
+    }
+
+    private ResponseEntity<ErrorResponseDTO> buildResponse(HttpStatus status, String message) {
+        ErrorResponseDTO body = new ErrorResponseDTO(status.value(), status.getReasonPhrase(), message, LocalDateTime.now());
 
         return ResponseEntity.status(status).body(body);
     }

@@ -324,6 +324,52 @@ class UserPostgresIT {
         assertTrue(operation.get("responses").has("400"));
     }
 
+    @Test
+    void shouldPersistNameAtLimitForCreateAndUpdate() throws Exception {
+        String name = "a".repeat(255);
+        String response = mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("name", name))))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(response).get("id").asLong();
+        assertEquals(name, storedName(id));
+        String updatedName = "b".repeat(255);
+        mockMvc.perform(put("/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("name", updatedName))))
+                .andExpect(status().isOk());
+        assertEquals(updatedName, storedName(id));
+        assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+    }
+
+    @Test
+    void shouldPreserveDatabaseWhenWriteBodyIsInvalid() throws Exception {
+        long id = createUser();
+        String[] bodies = {"{}", "{\"name\":null}", "{\"name\":\"\"}", "{\"name\":\"   \"}",
+                "{\"name\":\"" + "a".repeat(256) + "\"}", "{", "", "null", "[]", "{\"name\":{}}"};
+        for (String body : bodies) {
+            for (String method : new String[]{"POST", "PUT"}) {
+                String path = method.equals("POST") ? "/users" : "/users/" + id;
+                mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), path)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andExpect(status().isBadRequest())
+                        .andExpect(jsonPath("$.status").value(400));
+                assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+                assertEquals("Jefferson Andrade", storedName(id));
+            }
+        }
+    }
+
+    @Test
+    void shouldReturnTypedErrorsForMissingUsers() throws Exception {
+        for (String method : new String[]{"GET", "PUT", "DELETE"}) {
+            mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), "/users/9223372036854775807")
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                    .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.error").value("Not Found"))
+                    .andExpect(jsonPath("$.timestamp").isString());
+        }
+        assertEquals(0L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+    }
+
     private long insertUser(String name) {
         return jdbc.queryForObject("INSERT INTO users (name) VALUES (?) RETURNING id", Long.class, name);
     }

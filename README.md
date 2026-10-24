@@ -380,8 +380,10 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `UserServiceTest` | Unitário, com repository mockado | CRUD, filtro normalizado, seleção da consulta paginada, conversão dos DTOs e metadados | 9 |
 | `UserControllerTest` | Web, com service mockado | CRUD, padrões e parâmetros de listagem, limites, erros 400 e falhas inesperadas | 30 |
 | `CrudApplicationTests` | Contexto, com H2 em memória | Carregamento da aplicação | 1 |
-| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, paginação, busca, ordenação, OpenAPI e regressão de Flyway | 12 |
-| **Total** | | | **52** |
+| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, paginação, busca, ordenação, OpenAPI, Flyway e integridade de escritas inválidas | 15 |
+| `UserValidationTest` | Web, com service mockado | Limites POST/PUT, corpos inválidos, contrato 400/404, timestamp e falhas inesperadas | 29 |
+| `UserOpenApiTest` | Aplicação completa com H2 | Schemas de validação e de respostas de erro no OpenAPI | 1 |
+| **Total previsto** | | | **85** |
 
 ### Executar os testes sem Docker
 
@@ -397,7 +399,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **40 testes**: os testes de serviço e de controller com mocks e o teste de contexto com H2. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **70 testes**: serviço, controllers, validação, contexto H2 e contrato OpenAPI. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -415,7 +417,7 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` executa os 40 testes convencionais e os 12 testes `UserPostgresIT`, totalizando **52 testes**. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` prevê os 70 testes convencionais e os 15 testes `UserPostgresIT`, totalizando **85 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
 
@@ -471,13 +473,37 @@ Não é necessário iniciar o PostgreSQL com Docker Compose para essa suíte. Um
 
 Os relatórios Surefire e Failsafe produzidos são enviados como o artefato **relatorios-testes-crud**, mesmo quando os testes falham, e ficam disponíveis por **14 dias**. Se a execução falhar antes de gerar relatórios, consulte os logs das etapas. Para conferir o resultado, abra a execução na aba **Actions** e baixe o artefato.
 
-A suíte atual possui **52 testes** (40 convencionais e 12 de integração), validados localmente em 21/10/2026 com `BUILD SUCCESS`, sem falhas, erros ou testes ignorados. O workflow executa os mesmos comandos; confira o status do commit correspondente na aba Actions. Historicamente, eram 16 testes no commit `1a934d2` e 18 após a integração inicial do Flyway. Conforme novos cenários forem adicionados, atualize a quantidade a partir dos relatórios reais.
+Em 24/10/2026, `mvn test` executou **70 testes, sem falhas, erros ou testes ignorados**, com Java 21. A validação completa dos **15 testes PostgreSQL** depende de acesso ao Docker; não considerar os 85 testes aprovados até conferir `verify` e os relatórios do CI. O commit anterior `76d1c07` registrava 52 testes aprovados; os novos cenários ainda precisam da verificação PostgreSQL. Consulte a execução correspondente ao commit na aba Actions.
 
 ---
 
 # ✅ Validação e tratamento de exceções
 
-A API utiliza **Bean Validation** para validar os dados recebidos nas requisições.
+A API utiliza **Bean Validation** em POST e PUT. `name` é obrigatório (`@NotBlank`) e limitado por `@Size(max = 255)`. O limite usa `String.length()` (unidades UTF-16); caracteres suplementares, como alguns emojis, contam duas unidades. O schema OpenAPI informa `maxLength: 255`; para esses caracteres, o limite efetivo Java pode ser mais restritivo. O nome recebido não é truncado nem normalizado.
+
+| Entrada | Resposta |
+|---|---|
+| Nome ausente, nulo, vazio ou só espaços | 400 — `O nome é obrigatório` |
+| Nome acima de 255 unidades UTF-16 | 400 — `O nome deve ter no máximo 255 caracteres` |
+| JSON malformado, tipo incompatível ou corpo obrigatório ausente | 400 — `Corpo da requisição ausente ou JSON inválido` |
+| ID inexistente em GET, PUT ou DELETE | 404 — `Usuário não encontrado: <id>` |
+
+As respostas de erro tratadas usam `ErrorResponseDTO`, preservando os campos existentes e timestamp como texto ISO de data/hora local, sem fuso:
+
+```json
+{
+  "status": 400,
+  "error": "Bad Request",
+  "message": "O nome deve ter no máximo 255 caracteres",
+  "timestamp": "2026-10-24T12:00:00"
+}
+```
+
+Para testar corpo ausente, envie POST `/users` sem corpo; para JSON malformado, envie `{"name":`. Para limite, envie `{"name":"..."}` com 255 letras (aceito) ou 256 letras (400). PUT usa as mesmas regras; utilize um ID existente. Para 404, consulte, atualize com corpo válido ou exclua um ID inexistente. Os exemplos de erro não contêm detalhes de SQL nem mensagens internas do parser.
+
+Se houver múltiplas violações, a seleção é estável: campo, código da constraint e mensagem em ordem lexical (`NotBlank` antes de `Size` para `name`). Validação do corpo ocorre antes da chamada ao serviço; o tratamento de falhas inesperadas não foi convertido em 400. A listagem paginada, a tabela `users` e a migração V1 permanecem compatíveis.
+
+Os testes PostgreSQL verificam que POST inválido não insere, PUT inválido preserva o nome e o limite de 255 é persistido corretamente. Esses testes usam somente o banco temporário do Testcontainers.
 
 Também possui tratamento global de exceções através de um `GlobalExceptionHandler`.
 

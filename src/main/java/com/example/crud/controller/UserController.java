@@ -1,6 +1,7 @@
 package com.example.crud.controller;
 
 import com.example.crud.dto.UserRequestDTO;
+import com.example.crud.dto.ErrorResponseDTO;
 import com.example.crud.dto.UserResponseDTO;
 import com.example.crud.service.UserService;
 import jakarta.validation.Valid;
@@ -29,6 +30,10 @@ public class UserController {
         this.userService = userService;
     }
 
+    @ApiResponse(responseCode = "400", description = "Nome inválido, JSON malformado ou corpo ausente",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
+    @ApiResponse(responseCode = "201", description = "Usuário criado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponseDTO.class)))
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponseDTO createUser(@Valid @RequestBody UserRequestDTO dto) {
@@ -42,7 +47,7 @@ public class UserController {
                     + "Ao ordenar por name, id na mesma direção resolve empates.")
     @ApiResponse(responseCode = "200", description = "Página de usuários; sem resultados ou além do fim retorna content vazio")
     @ApiResponse(responseCode = "400", description = "Parâmetros inválidos; resposta com status, error, message e timestamp",
-            content = @Content(mediaType = "application/json", schema = @Schema(type = "object"),
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class),
                     examples = @ExampleObject(value = "{\"status\":400,\"error\":\"Bad Request\",\"message\":\"size deve estar entre 1 e 100\",\"timestamp\":\"2026-10-21T15:00:00\"}")))
     public PageResponseDTO<UserResponseDTO> getAllUsers(
             @Parameter(description = "Índice da página a partir de zero", schema = @Schema(type = "integer", format = "int32", minimum = "0", defaultValue = "0"))
@@ -81,11 +86,21 @@ public class UserController {
         return userService.getAllUsers(name, PageRequest.of(page, size, sorting));
     }
 
+    @ApiResponse(responseCode = "404", description = "Usuário não encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
+    @ApiResponse(responseCode = "200", description = "Usuário encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponseDTO.class)))
     @GetMapping("/{id}")
     public UserResponseDTO getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 
+    @ApiResponse(responseCode = "400", description = "Nome inválido, JSON malformado ou corpo ausente",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário não encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
+    @ApiResponse(responseCode = "200", description = "Usuário atualizado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponseDTO.class)))
     @PutMapping("/{id}")
     public UserResponseDTO putUser(
             @PathVariable Long id,
@@ -93,6 +108,9 @@ public class UserController {
         return userService.updateUser(id, dto);
     }
 
+    @ApiResponse(responseCode = "404", description = "Usuário não encontrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
+    @ApiResponse(responseCode = "204", description = "Usuário excluído", content = @Content)
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable Long id) {
