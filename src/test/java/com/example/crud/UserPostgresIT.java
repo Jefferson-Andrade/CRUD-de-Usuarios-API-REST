@@ -37,6 +37,39 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser(roles = "ADMIN")
 class UserPostgresIT {
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Test
+    @org.springframework.security.test.context.support.WithAnonymousUser
+    void shouldAuthenticateMigratedAccountsAndEnforceRoles() throws Exception {
+        var bootstrap = new com.example.crud.config.AdminBootstrap(jdbc, passwordEncoder,
+                "postgres-admin", "integration-test-password");
+        bootstrap.run(null);
+        String hash = jdbc.queryForObject("SELECT password_hash FROM auth_accounts WHERE username = 'postgres-admin'", String.class);
+        assertTrue(passwordEncoder.matches("integration-test-password", hash));
+        jdbc.update("INSERT INTO auth_accounts VALUES ('postgres-reader', ?, 'READER', true)", hash);
+        try {
+            mockMvc.perform(get("/users").with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                            .httpBasic("postgres-reader", "integration-test-password")))
+                    .andExpect(status().isOk());
+            mockMvc.perform(post("/users").with(csrf())
+                            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                                    .httpBasic("postgres-reader", "integration-test-password"))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(post("/users").with(csrf())
+                            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                                    .httpBasic("postgres-admin", "integration-test-password"))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                    .andExpect(status().isCreated());
+            assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+            assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE version='2' AND success=true", Long.class));
+        } finally {
+            jdbc.update("DELETE FROM auth_accounts WHERE username IN ('postgres-reader', 'postgres-admin')");
+        }
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class PostgresConfiguration {
 

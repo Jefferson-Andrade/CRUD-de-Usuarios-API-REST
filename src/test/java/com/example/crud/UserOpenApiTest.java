@@ -21,6 +21,11 @@ class UserOpenApiTest {
         String json = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         var doc = objectMapper.readTree(json);
+        assertEquals("basic", doc.get("components").get("securitySchemes").get("basicAuth").get("scheme").asText());
+        assertTrue(doc.get("paths").get("/users").get("get").get("security").get(0).has("basicAuth"));
+        for (String code : new String[]{"401", "403"}) {
+            assertTrue(doc.get("paths").get("/users").get("post").get("responses").has(code));
+        }
         var schemas = doc.get("components").get("schemas");
         assertEquals(255, schemas.get("UserRequestDTO").get("properties").get("name").get("maxLength").asInt());
         var fields = schemas.get("ErrorResponseDTO").get("properties");
