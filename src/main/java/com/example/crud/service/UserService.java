@@ -23,8 +23,9 @@ public class UserService {
     public UserResponseDTO createUser(UserRequestDTO dto) {
         User user = new User();
         user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.saveAndFlush(user);
 
         return toResponseDTO(savedUser);
     }
@@ -49,6 +50,7 @@ public class UserService {
                 .orElseThrow(() -> new UserNotFoundException(id));
 
         user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
 
         // Flush runs @PreUpdate before mapping the response, so updatedAt is current in the PUT body.
         User updatedUser = userRepository.saveAndFlush(user);
@@ -67,6 +69,7 @@ public class UserService {
         return new UserResponseDTO(
                 user.getId(),
                 user.getName(),
+                user.getEmail(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
