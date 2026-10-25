@@ -26,7 +26,9 @@ mesmo sem credenciais. Os erros usam `status`, `error`, `message` e `timestamp`,
 
 ## Criar o administrador inicial no Windows
 
-Primeiro inicie o PostgreSQL com `docker compose up -d`. Na pasta do projeto, execute:
+Para executar tudo em containers, siga o [guia Docker](docker.md).
+Para executar Maven no host, pare uma API em container com `docker compose stop api`
+e inicie somente o PostgreSQL com `docker compose up -d db`. Na pasta do projeto, execute:
 
 ```powershell
 $env:APP_ADMIN_USERNAME = 'admin'

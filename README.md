@@ -36,7 +36,7 @@ Veja o [guia de auditoria dos usuários](docs/user-audit.md) para comportamento,
 | 🗃️ **Spring Data JPA** | Persistência de dados |
 | 🐘 **PostgreSQL 16** | Banco de dados |
 | **Flyway** | Migrações SQL versionadas e histórico do schema |
-| 🐳 **Docker / Docker Compose** | Containerização do banco |
+| 🐳 **Docker / Docker Compose** | Containerização da API e do banco |
 | 📖 **OpenAPI / Swagger** | Documentação e testes da API |
 | 🧪 **JUnit Jupiter** | Testes automatizados |
 | 🎭 **Mockito** | Testes unitários |
@@ -384,25 +384,19 @@ Referências: [Spring Boot — Database Initialization](https://docs.spring.io/s
 
 # 🐳 Docker
 
-O PostgreSQL é executado utilizando Docker Compose.
+API Java 21 e PostgreSQL iniciam juntos. Copie `.env.example` para `.env`,
+configure a conta ADMIN e execute:
 
-### Iniciar o banco
-
-```bash
-docker compose up -d
+```powershell
+docker compose up --build -d
+docker compose logs -f api
 ```
 
-### Verificar o container
-
-```bash
-docker compose ps
-```
-
-### Parar o banco
-
-```bash
-docker compose down
-```
+Swagger: http://localhost:8080/swagger-ui/index.html.
+O banco possui healthcheck e o volume persiste entre reinicializações.
+Consulte o [guia Docker](docs/docker.md) para credenciais, banco existente,
+logs, parada, execução Maven no host e verificação automatizada.
+A configuração é local; a demonstração online e os perfis de produção são etapas posteriores.
 
 ---
 
@@ -636,9 +630,9 @@ CRUD-de-Usuarios-API-REST
 
 ## Pré-requisitos
 
-- Java 21
-- Docker Desktop
+- Docker Desktop com containers Linux e Docker Compose v2
 - Git
+- Java 21 somente para executar Maven no host
 
 ## 1. Clone o repositório
 
@@ -652,39 +646,24 @@ Entre na pasta:
 cd CRUD-de-Usuarios-API-REST
 ```
 
-## 2. Inicie o PostgreSQL
+## 2. Configure e inicie os serviços
 
-```bash
-docker compose up -d
+Copie `.env.example` para `.env` e preencha `APP_ADMIN_USERNAME` e
+`APP_ADMIN_PASSWORD`. Não existe senha padrão da API.
+
+```powershell
+docker compose up --build -d
 ```
 
-Se o volume já possui dados, siga **Adoção em um banco existente** antes de iniciar a aplicação com esta versão.
+Se o volume já possui dados, confira as credenciais e siga **Adoção em um banco existente**
+quando ainda não houver histórico Flyway.
 
-## 3. Execute a aplicação
+## 3. Acesse o Swagger
 
-No Windows:
-
-```bash
-.\mvnw.cmd spring-boot:run
-```
-
-Ou:
-
-```bash
-mvn spring-boot:run
-```
-
-A aplicação será executada em:
-
-```text
-http://localhost:8080
-```
-
-## 4. Acesse o Swagger
-
-```text
 http://localhost:8080/swagger-ui/index.html
-```
+
+Siga o [guia de autenticação](docs/authentication.md). Para iniciar somente o banco
+e executar Maven no host, consulte o [guia Docker](docs/docker.md).
 
 ---
 
