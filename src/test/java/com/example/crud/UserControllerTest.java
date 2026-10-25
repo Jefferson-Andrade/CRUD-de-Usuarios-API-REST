@@ -1,5 +1,8 @@
 package com.example.crud;
 
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 import com.example.crud.dto.UserResponseDTO;
 import com.example.crud.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -24,8 +27,12 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@org.springframework.context.annotation.Import(com.example.crud.config.SecurityConfig.class)
 @WebMvcTest
+@WithMockUser(roles = "ADMIN")
 class UserControllerTest {
+    @MockitoBean org.springframework.security.core.userdetails.UserDetailsService accounts;
+
 
     @Autowired
     private MockMvc mockMvc;
@@ -38,7 +45,7 @@ class UserControllerTest {
         given(userService.createUser(any()))
                 .willReturn(new UserResponseDTO(1L, "Jefferson Andrade"));
 
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post("/users").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Jefferson Andrade\"}"))
                 .andExpect(status().isCreated())
@@ -48,7 +55,7 @@ class UserControllerTest {
 
     @Test
     void shouldRejectBlankName() throws Exception {
-        mockMvc.perform(post("/users")
+        mockMvc.perform(post("/users").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"\"}"))
                 .andExpect(status().isBadRequest());
@@ -163,7 +170,7 @@ class UserControllerTest {
         given(userService.updateUser(eq(1L), any()))
                 .willReturn(new UserResponseDTO(1L, "Jefferson Atualizado"));
 
-        mockMvc.perform(put("/users/1")
+        mockMvc.perform(put("/users/1").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Jefferson Atualizado\"}"))
                 .andExpect(status().isOk())
@@ -172,7 +179,7 @@ class UserControllerTest {
 
     @Test
     void shouldDeleteUser() throws Exception {
-        mockMvc.perform(delete("/users/1"))
+        mockMvc.perform(delete("/users/1").with(csrf()))
                 .andExpect(status().isNoContent());
 
         verify(userService).deleteUser(1L);

@@ -1,5 +1,8 @@
 package com.example.crud;
 
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 import com.example.crud.dto.UserResponseDTO;
 import com.example.crud.exception.UserNotFoundException;
 import com.example.crud.service.UserService;
@@ -26,8 +29,12 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@org.springframework.context.annotation.Import(com.example.crud.config.SecurityConfig.class)
 @WebMvcTest
+@WithMockUser(roles = "ADMIN")
 class UserValidationTest {
+    @MockitoBean org.springframework.security.core.userdetails.UserDetailsService accounts;
+
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
     @MockitoBean UserService service;
@@ -45,7 +52,7 @@ class UserValidationTest {
 
     @ParameterizedTest @MethodSource("invalidNames")
     void rejectsInvalidNamesBeforeCallingService(String method, String body, String message) throws Exception {
-        expectError(mvc.perform(request(HttpMethod.valueOf(method), path(method))
+        expectError(mvc.perform(request(HttpMethod.valueOf(method), path(method)).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(body)), 400, "Bad Request", message);
         verifyNoInteractions(service);
     }
@@ -55,7 +62,7 @@ class UserValidationTest {
         String name = " " + "a".repeat(253) + " ";
         given(service.createUser(any())).willReturn(new UserResponseDTO(1L, name));
         given(service.updateUser(eq(1L), any())).willReturn(new UserResponseDTO(1L, name));
-        mvc.perform(request(HttpMethod.valueOf(method), path(method))
+        mvc.perform(request(HttpMethod.valueOf(method), path(method)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(java.util.Map.of("name", name))))
                 .andExpect(status().is(method.equals("POST") ? 201 : 200))
                 .andExpect(jsonPath("$.name").value(name));
@@ -70,7 +77,7 @@ class UserValidationTest {
 
     @ParameterizedTest @MethodSource("invalidBodies")
     void rejectsUnreadableBodiesWithoutExposingParserDetails(String method, String body) throws Exception {
-        expectError(mvc.perform(request(HttpMethod.valueOf(method), path(method))
+        expectError(mvc.perform(request(HttpMethod.valueOf(method), path(method)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(body)),
                 400, "Bad Request", "Corpo da requisição ausente ou JSON inválido");
         verifyNoInteractions(service);
@@ -81,7 +88,7 @@ class UserValidationTest {
         given(service.getUserById(999L)).willThrow(new UserNotFoundException(999L));
         given(service.updateUser(eq(999L), any())).willThrow(new UserNotFoundException(999L));
         doThrow(new UserNotFoundException(999L)).when(service).deleteUser(999L);
-        expectError(mvc.perform(request(HttpMethod.valueOf(method), "/users/999")
+        expectError(mvc.perform(request(HttpMethod.valueOf(method), "/users/999").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}")),
                 404, "Not Found", "Usuário não encontrado: 999");
     }
@@ -91,7 +98,7 @@ class UserValidationTest {
         given(service.createUser(any())).willThrow(new IllegalStateException("internal failure"));
         given(service.updateUser(eq(1L), any())).willThrow(new IllegalStateException("internal failure"));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> mvc.perform(
-                        request(HttpMethod.valueOf(method), path(method)).contentType(MediaType.APPLICATION_JSON)
+                        request(HttpMethod.valueOf(method), path(method)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                                 .content("{\"name\":\"Ana\"}")))
                 .hasRootCauseInstanceOf(IllegalStateException.class);
     }

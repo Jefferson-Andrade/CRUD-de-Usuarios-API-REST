@@ -22,6 +22,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 @RestController
 @RequestMapping("/users")
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "basicAuth")
+@ApiResponse(responseCode = "401", description = "Credenciais ausentes ou inválidas",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
+@ApiResponse(responseCode = "403", description = "Permissão insuficiente ou token CSRF ausente/inválido",
+        content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
 public class UserController {
 
     private final UserService userService;
