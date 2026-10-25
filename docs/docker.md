@@ -33,6 +33,7 @@ continua pendente; este Compose verifica a disponibilidade do banco.
 
 | Variavel | Padrao | Uso |
 |---|---|---|
+| SPRING_PROFILES_ACTIVE | dev | Perfil da API (dev ou prod) |
 | POSTGRES_DB | crud | Banco |
 | POSTGRES_USER | postgres | Usuario do banco |
 | POSTGRES_PASSWORD | postgres | Senha local do banco |
@@ -42,8 +43,8 @@ continua pendente; este Compose verifica a disponibilidade do banco.
 | APP_ADMIN_PASSWORD | vazio | Senha inicial do ADMIN |
 
 A API acessa `db:5432` na rede interna. API e banco publicam portas apenas em
-127.0.0.1. Esta configuracao e para desenvolvimento; a demonstracao HTTPS e os
-perfis de producao sao etapas posteriores do roteiro.
+127.0.0.1. Este Compose permanece local. Os perfis dev/prod estao descritos no
+[guia de configuracao](profiles.md); a demonstracao HTTPS sera uma etapa posterior.
 
 As credenciais POSTGRES_* inicializam somente um volume novo. Em volume existente,
 mudar o .env nao altera usuarios ou senhas: configure os valores reais ja utilizados.
@@ -87,4 +88,5 @@ O workflow Docker compila a imagem e usa um banco descartavel do runner.
 O smoke test verifica acesso anonimo negado, autenticacao Basic, CSRF, CRUD,
 migracoes V1-V4 e leitura de um registro depois de parar e subir API/banco.
 A limpeza com volumes ocorre somente no runner CI, nunca no banco local.
-A suite completa Maven continua no workflow CI - Testes do CRUD.
+A verificacao Docker roda nos perfis dev e prod. A suite completa Maven continua
+no workflow CI - Testes do CRUD.
