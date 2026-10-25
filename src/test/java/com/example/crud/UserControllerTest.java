@@ -47,7 +47,7 @@ class UserControllerTest {
 
         mockMvc.perform(post("/users").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Jefferson Andrade\"}"))
+                        .content("{\"email\":\"fixture@example.com\",\"name\":\"Jefferson Andrade\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Jefferson Andrade"));
@@ -57,7 +57,7 @@ class UserControllerTest {
     void shouldRejectBlankName() throws Exception {
         mockMvc.perform(post("/users").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"\"}"))
+                        .content("{\"email\":\"fixture@example.com\",\"name\":\"\"}"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -172,7 +172,7 @@ class UserControllerTest {
 
         mockMvc.perform(put("/users/1").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Jefferson Atualizado\"}"))
+                        .content("{\"email\":\"fixture@example.com\",\"name\":\"Jefferson Atualizado\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Jefferson Atualizado"));
     }

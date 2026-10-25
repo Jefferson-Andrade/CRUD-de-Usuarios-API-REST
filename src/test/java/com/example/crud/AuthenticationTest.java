@@ -69,7 +69,7 @@ class AuthenticationTest {
         assertNotNull(token);
         mvc.perform(request(HttpMethod.valueOf(method), method.equals("POST") ? "/users" : "/users/1")
                         .with(httpBasic("reader", PASSWORD)).cookie(token).header("X-XSRF-TOKEN", token.getValue())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("Permissão insuficiente"));
     }
 
@@ -77,7 +77,7 @@ class AuthenticationTest {
     void adminNeedsCsrfForEveryWrite(String method) throws Exception {
         mvc.perform(request(HttpMethod.valueOf(method), method.equals("POST") ? "/users" : "/users/1")
                         .with(httpBasic("admin", PASSWORD)).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Ana\"}"))
+                        .content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("Token CSRF ausente ou inválido"));
     }
 
@@ -92,12 +92,12 @@ class AuthenticationTest {
         String header = token.get("headerName").asText();
         String json = mvc.perform(post("/users").with(httpBasic("admin", PASSWORD))
                         .cookie(cookie).header(header, cookie.getValue())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = mapper.readTree(json).get("id").asLong();
         mvc.perform(put("/users/{id}", id).with(httpBasic("admin", PASSWORD))
                         .cookie(cookie).header(header, cookie.getValue())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Maria\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Maria\"}"))
                 .andExpect(status().isOk());
         mvc.perform(delete("/users/{id}", id).with(httpBasic("admin", PASSWORD))
                         .cookie(cookie).header(header, cookie.getValue())).andExpect(status().isNoContent());
@@ -107,7 +107,7 @@ class AuthenticationTest {
     void mismatchedCsrfIsRejected() throws Exception {
         mvc.perform(post("/users").with(httpBasic("admin", PASSWORD))
                         .cookie(new Cookie("XSRF-TOKEN", "one")).header("X-XSRF-TOKEN", "two")
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                 .andExpect(status().isForbidden());
     }
 

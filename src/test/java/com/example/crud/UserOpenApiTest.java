@@ -34,6 +34,17 @@ class UserOpenApiTest {
             assertFalse(schemas.get("UserRequestDTO").get("properties").has(field));
         }
         assertEquals(255, schemas.get("UserRequestDTO").get("properties").get("name").get("maxLength").asInt());
+        var email = schemas.get("UserRequestDTO").get("properties").get("email");
+        assertEquals("email", email.get("format").asText());
+        assertEquals(254, email.get("maxLength").asInt());
+        assertTrue(schemas.get("UserRequestDTO").get("required").toString().contains("email"));
+        assertTrue(responseFields.has("email"));
+        for (String method : new String[]{"post", "put"}) {
+            String path = method.equals("post") ? "/users" : "/users/{id}";
+            String conflict = doc.get("paths").get(path).get(method).get("responses").get("409")
+                    .get("content").get("application/json").get("schema").get("$ref").asText();
+            assertTrue(conflict.endsWith("/ErrorResponseDTO"));
+        }
         var fields = schemas.get("ErrorResponseDTO").get("properties");
         for (String field : new String[]{"status", "error", "message", "timestamp"}) assertTrue(fields.has(field));
         assertEquals("date-time", fields.get("timestamp").get("format").asText());

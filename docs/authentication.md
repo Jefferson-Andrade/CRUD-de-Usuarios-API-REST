@@ -6,7 +6,7 @@ A API usa Spring Security com **HTTP Basic**, sem JWT, refresh token ou sessão 
 O cliente envia `Authorization: Basic <base64(username:password)>` em cada chamada protegida.
 Base64 não criptografa: fora de localhost, disponibilize a API somente por HTTPS.
 
-`users` continua representando os registros do CRUD, apenas com `id` e `name`.
+`users` continua representando os registros do CRUD, com `id`, `name`, `email`, `createdAt` e `updatedAt`.
 As credenciais ficam em `auth_accounts`, criada pela migração Flyway V2:
 `username`, `password_hash`, `role` e `enabled`. Não existe cadastro público de contas.
 Contas desabilitadas não autenticam. Usuários desconhecidos e senhas incorretas recebem a mesma mensagem.
@@ -74,7 +74,7 @@ $headers = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encodin
 $csrf = Invoke-RestMethod 'http://localhost:8080/csrf' -Headers $headers -SessionVariable apiCookies
 $headers[$csrf.headerName] = $csrf.token
 Invoke-RestMethod 'http://localhost:8080/users' -Method Post -Headers $headers -WebSession $apiCookies `
-    -ContentType 'application/json' -Body '{"name":"Jefferson Andrade"}'
+    -ContentType 'application/json' -Body '{"name":"Jefferson Andrade","email":"jefferson@example.com"}'
 $pair = $null
 $headers.Clear()
 $credential = $null

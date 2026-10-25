@@ -8,6 +8,15 @@ public class UserResponseDTO {
     private Long id;
     private String name;
 
+    @Schema(description = "E-mail normalizado; nulo para cadastros anteriores à V4 ainda não atualizados",
+            example = "jefferson@example.com", format = "email", maxLength = 254,
+            nullable = true)
+    private String email;
+
+    public String getEmail() {
+        return email;
+    }
+
     @Schema(description = "Data de criação em UTC; em registros legados, referência da migração V3",
             type = "string", format = "date-time", accessMode = Schema.AccessMode.READ_ONLY)
     private Instant createdAt;
@@ -28,6 +37,11 @@ public class UserResponseDTO {
         this.name = name;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+    }
+
+    public UserResponseDTO(Long id, String name, String email, Instant createdAt, Instant updatedAt) {
+        this(id, name, createdAt, updatedAt);
+        this.email = email;
     }
 
     public Instant getCreatedAt() {

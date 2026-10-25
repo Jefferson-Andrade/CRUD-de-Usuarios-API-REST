@@ -48,6 +48,18 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Corpo da requisição ausente ou JSON inválido");
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        // Match only the email index. Other integrity failures keep their original error semantics.
+        for (Throwable cause = ex; cause != null; cause = cause.getCause()) {
+            if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                    && "uk_users_email".equalsIgnoreCase(violation.getConstraintName())) {
+                return buildResponse(HttpStatus.CONFLICT, "O e-mail já está cadastrado");
+            }
+        }
+        throw ex;
+    }
+
     private ResponseEntity<ErrorResponseDTO> buildResponse(HttpStatus status, String message) {
         ErrorResponseDTO body = new ErrorResponseDTO(status.value(), status.getReasonPhrase(), message, LocalDateTime.now());
 

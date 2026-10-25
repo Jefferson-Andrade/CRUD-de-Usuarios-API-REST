@@ -7,6 +7,7 @@ Ambos são instantes em UTC no formato ISO 8601, com precisão de até seis casa
 {
   "id": 1,
   "name": "Jefferson Andrade",
+  "email": "jefferson@example.com",
   "createdAt": "2026-10-24T18:00:00.123456Z",
   "updatedAt": "2026-10-24T18:30:00.654321Z"
 }
@@ -16,7 +17,7 @@ Os valores do exemplo são ilustrativos. Na criação, as duas datas recebem o m
 Uma alteração efetiva do nome atualiza somente `updatedAt`; repetir PUT com o mesmo nome não altera as datas.
 Falhas de validação também preservam as datas. A exclusão mantém o comportamento atual (204, sem corpo).
 
-O corpo de entrada continua contendo apenas `name`. As datas não são aceitas como valores controláveis:
+O corpo de entrada contém `name` e `email` obrigatório desde a V4 (veja [e-mail dos usuários](user-email.md)). As datas não são aceitas como valores controláveis:
 se enviadas como propriedades extras, são ignoradas pelo DTO de entrada. O Swagger as documenta como
 campos de resposta `date-time` e somente leitura. A ordenação continua limitada a `id` e `name`.
 
@@ -44,9 +45,9 @@ Os defaults permitem INSERT SQL sem informar datas. Não existe trigger de UPDAT
 diretamente por SQL devem atribuir `updated_at = CURRENT_TIMESTAMP` explicitamente. Escritas pela API
 são auditadas pelos callbacks JPA.
 
-Em um banco vazio, Flyway aplica V1, V2 e V3. Em um banco com V1/V2 registradas, aplica somente V3.
+Em um banco vazio, Flyway aplica V1, V2, V3 e V4. Em um banco com V1/V2 registradas, aplica V3 e V4.
 Em banco legado sem histórico, siga primeiro o procedimento de backup e baseline V1 do README;
-na inicialização seguinte, V2 e V3 são aplicadas. Não altere scripts já executados.
+na inicialização seguinte, V2, V3 e V4 são aplicadas. Não altere scripts já executados.
 
 Confira o histórico após atualizar o projeto e iniciar a aplicação:
 

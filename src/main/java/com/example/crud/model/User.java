@@ -15,6 +15,18 @@ public class User {
 
     private String name;
 
+    // Nullable only to preserve legacy users; API writes require a valid email.
+    @Column(length = 254)
+    private String email;
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email == null ? null : email.strip().toLowerCase(java.util.Locale.ROOT);
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
