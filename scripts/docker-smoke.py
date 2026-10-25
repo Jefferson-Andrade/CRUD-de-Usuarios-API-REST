@@ -50,6 +50,7 @@ def ready():
 
 
 ready()
+assert request("/actuator/health", method="HEAD", authenticated=False) == (200, None)
 assert request("/actuator/health", authenticated=False) == (200, {"status": "UP"})
 status, admin_health = request("/actuator/health")
 assert status == 200 and admin_health["components"]["db"]["status"] == "UP"

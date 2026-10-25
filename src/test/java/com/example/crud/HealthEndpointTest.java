@@ -62,9 +62,10 @@ class HealthEndpointTest {
     }
 
     @Test
-    void headSummaryIsPublicAndHasNoBody() throws Exception {
+    void headSummaryIsPublic() throws Exception {
+        // MockMvc retains generated content for Actuator HEAD; wire semantics are checked by Docker.
         mvc.perform(head("/actuator/health")).andExpect(status().isOk())
-                .andExpect(content().string(""));
+                .andExpect(header().exists("X-Request-Id"));
     }
 
     @Test
