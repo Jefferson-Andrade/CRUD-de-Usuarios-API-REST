@@ -26,8 +26,9 @@ Sem bootstrap e sem contas existentes, a API inicia, mas consultas protegidas re
 O banco precisa passar no pg_isready antes de iniciar a API. Essa verificacao indica
 que o PostgreSQL aceita conexoes; a inicializacao da API ainda precisa concluir
 Flyway, JPA e bootstrap. Confira o log de inicializacao e o Swagger.
-Uma falha de migracao nao e corrigida automaticamente. A etapa de Actuator do roteiro
-continua pendente; este Compose verifica a disponibilidade do banco.
+Uma falha de migracao nao e corrigida automaticamente. A saude da API pode ser
+consultada em /actuator/health; o healthcheck do Compose continua verificando somente
+o banco. Consulte o [guia de monitoramento](monitoring.md).
 
 ## Configuracao local
 
@@ -88,5 +89,6 @@ O workflow Docker compila a imagem e usa um banco descartavel do runner.
 O smoke test verifica acesso anonimo negado, autenticacao Basic, CSRF, CRUD,
 migracoes V1-V4 e leitura de um registro depois de parar e subir API/banco.
 A limpeza com volumes ocorre somente no runner CI, nunca no banco local.
-A verificacao Docker roda nos perfis dev e prod. A suite completa Maven continua
+A verificacao Docker roda nos perfis dev e prod e tambem simula indisponibilidade
+do banco temporario para conferir health DOWN/UP e logs de falha. A suite completa Maven continua
 no workflow CI - Testes do CRUD.
