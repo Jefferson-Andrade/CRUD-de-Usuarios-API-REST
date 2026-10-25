@@ -27,6 +27,12 @@ class UserOpenApiTest {
             assertTrue(doc.get("paths").get("/users").get("post").get("responses").has(code));
         }
         var schemas = doc.get("components").get("schemas");
+        var responseFields = schemas.get("UserResponseDTO").get("properties");
+        for (String field : new String[]{"createdAt", "updatedAt"}) {
+            assertEquals("date-time", responseFields.get(field).get("format").asText());
+            assertTrue(responseFields.get(field).get("readOnly").asBoolean());
+            assertFalse(schemas.get("UserRequestDTO").get("properties").has(field));
+        }
         assertEquals(255, schemas.get("UserRequestDTO").get("properties").get("name").get("maxLength").asInt());
         var fields = schemas.get("ErrorResponseDTO").get("properties");
         for (String field : new String[]{"status", "error", "message", "timestamp"}) assertTrue(fields.has(field));

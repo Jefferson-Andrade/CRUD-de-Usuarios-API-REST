@@ -37,6 +37,68 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser(roles = "ADMIN")
 class UserPostgresIT {
 
+    @Test
+    void shouldPersistAuditDatesAndReturnFreshUpdateTime() throws Exception {
+        long id = createUser();
+        var initial = jdbc.queryForMap("SELECT created_at, updated_at FROM users WHERE id = ?", id);
+        assertEquals(initial.get("created_at"), initial.get("updated_at"));
+        var old = java.time.OffsetDateTime.parse("2020-01-02T03:04:05Z");
+        jdbc.update("UPDATE users SET created_at = ?, updated_at = ? WHERE id = ?", old, old, id);
+
+        String json = mockMvc.perform(put("/users/{id}", id).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Auditado\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var dto = objectMapper.readTree(json);
+        var created = java.time.Instant.parse(dto.get("createdAt").asText());
+        var updated = java.time.Instant.parse(dto.get("updatedAt").asText());
+        assertEquals(old.toInstant(), created);
+        assertTrue(updated.isAfter(created));
+        assertEquals(created, jdbc.queryForObject("SELECT created_at FROM users WHERE id = ?",
+                java.time.OffsetDateTime.class, id).toInstant());
+        assertEquals(updated, jdbc.queryForObject("SELECT updated_at FROM users WHERE id = ?",
+                java.time.OffsetDateTime.class, id).toInstant());
+        mockMvc.perform(get("/users/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.createdAt").value(dto.get("createdAt").asText()))
+                .andExpect(jsonPath("$.updatedAt").value(dto.get("updatedAt").asText()));
+    }
+
+    @Test
+    void shouldUpgradeV2AndBackfillDatesWithoutLosingUsersOrAccounts() {
+        jdbc.execute("CREATE SCHEMA audit_upgrade");
+        try {
+            Flyway v2 = Flyway.configure().dataSource(jdbc.getDataSource())
+                    .defaultSchema("audit_upgrade").schemas("audit_upgrade")
+                    .locations("classpath:db/migration").target("2").load();
+            assertEquals(2, v2.migrate().migrationsExecuted);
+            Long id = jdbc.queryForObject("INSERT INTO audit_upgrade.users (name) VALUES ('Legado') RETURNING id", Long.class);
+            jdbc.update("INSERT INTO audit_upgrade.auth_accounts VALUES ('reader', 'test-hash', 'READER', true)");
+            java.time.Instant before = jdbc.queryForObject("SELECT CURRENT_TIMESTAMP", java.time.OffsetDateTime.class).toInstant();
+            Flyway latest = Flyway.configure().dataSource(jdbc.getDataSource())
+                    .defaultSchema("audit_upgrade").schemas("audit_upgrade").locations("classpath:db/migration").load();
+            assertEquals(1, latest.migrate().migrationsExecuted);
+            java.time.Instant after = jdbc.queryForObject("SELECT CURRENT_TIMESTAMP", java.time.OffsetDateTime.class).toInstant();
+            java.time.Instant backfill = jdbc.queryForObject("SELECT created_at FROM audit_upgrade.users WHERE id = ?",
+                    java.time.OffsetDateTime.class, id).toInstant();
+            assertFalse(backfill.isBefore(before));
+            assertFalse(backfill.isAfter(after));
+            assertEquals(backfill, jdbc.queryForObject("SELECT updated_at FROM audit_upgrade.users WHERE id = ?",
+                    java.time.OffsetDateTime.class, id).toInstant());
+            assertEquals("Legado", jdbc.queryForObject("SELECT name FROM audit_upgrade.users WHERE id = ?", String.class, id));
+            assertEquals("test-hash", jdbc.queryForObject("SELECT password_hash FROM audit_upgrade.auth_accounts WHERE username = 'reader'", String.class));
+            assertEquals(0, latest.migrate().migrationsExecuted);
+            assertEquals(backfill, jdbc.queryForObject("SELECT created_at FROM audit_upgrade.users WHERE id = ?",
+                    java.time.OffsetDateTime.class, id).toInstant());
+            assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                    () -> jdbc.update("UPDATE audit_upgrade.users SET created_at = NULL WHERE id = ?", id));
+            Long nextId = jdbc.queryForObject("INSERT INTO audit_upgrade.users (name) VALUES ('Novo') RETURNING id", Long.class);
+            assertTrue(nextId > id);
+            assertNotNull(jdbc.queryForObject("SELECT updated_at FROM audit_upgrade.users WHERE id = ?",
+                    java.time.OffsetDateTime.class, nextId));
+        } finally {
+            jdbc.execute("DROP SCHEMA audit_upgrade CASCADE");
+        }
+    }
+
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
@@ -174,8 +236,8 @@ class UserPostgresIT {
                 .baselineOnMigrate(false)
                 .load();
         assertEquals(0, nextStartup.migrate().migrationsExecuted);
-        assertEquals("2", nextStartup.info().current().getVersion().getVersion());
-        assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Long.class));
+        assertEquals("3", nextStartup.info().current().getVersion().getVersion());
+        assertEquals(3L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Long.class));
         assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
         assertEquals("Jefferson Andrade", storedName(id));
     }
@@ -202,7 +264,7 @@ class UserPostgresIT {
             // A configuração padrão deve recusar adoção silenciosa de um schema não vazio.
             assertThrows(org.flywaydb.core.api.FlywayException.class, legacy::migrate);
             legacy.baseline();
-            assertEquals(1, legacy.migrate().migrationsExecuted);
+            assertEquals(2, legacy.migrate().migrationsExecuted);
             assertEquals(1L, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM legacy_adoption.flyway_schema_history "
                             + "WHERE version = '1' AND type = 'BASELINE' AND success = true", Long.class));
