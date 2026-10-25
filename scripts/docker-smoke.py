@@ -52,9 +52,13 @@ assert status == 200
 status, user = request("/users", "POST", {"name": "Demo Docker", "email": "docker@example.com"}, csrf=csrf)
 assert status == 201
 user_id = user["id"]
+# Basic authentication may rotate the CSRF cookie; refresh before each write.
+status, csrf = request("/csrf")
+assert status == 200
 status, updated = request("/users/" + str(user_id), "PUT",
                           {"name": "Demo Atualizada", "email": "docker@example.com"}, csrf=csrf)
-assert status == 200 and updated["name"] == "Demo Atualizada"
+assert status == 200, f"PUT retornou HTTP {status}"
+assert updated["name"] == "Demo Atualizada"
 
 # Explicit stop/start avoids accepting the old API process during a restart.
 subprocess.run(["docker", "compose", "stop", "api", "db"], check=True)
