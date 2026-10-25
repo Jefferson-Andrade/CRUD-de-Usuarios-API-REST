@@ -46,7 +46,7 @@ class UserPostgresIT {
         jdbc.update("UPDATE users SET created_at = ?, updated_at = ? WHERE id = ?", old, old, id);
 
         String json = mockMvc.perform(put("/users/{id}", id).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Auditado\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Auditado\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         var dto = objectMapper.readTree(json);
         var created = java.time.Instant.parse(dto.get("createdAt").asText());
@@ -75,7 +75,7 @@ class UserPostgresIT {
             java.time.Instant before = jdbc.queryForObject("SELECT CURRENT_TIMESTAMP", java.time.OffsetDateTime.class).toInstant();
             Flyway latest = Flyway.configure().dataSource(jdbc.getDataSource())
                     .defaultSchema("audit_upgrade").schemas("audit_upgrade").locations("classpath:db/migration").load();
-            assertEquals(1, latest.migrate().migrationsExecuted);
+            assertEquals(2, latest.migrate().migrationsExecuted);
             java.time.Instant after = jdbc.queryForObject("SELECT CURRENT_TIMESTAMP", java.time.OffsetDateTime.class).toInstant();
             java.time.Instant backfill = jdbc.queryForObject("SELECT created_at FROM audit_upgrade.users WHERE id = ?",
                     java.time.OffsetDateTime.class, id).toInstant();
@@ -118,12 +118,12 @@ class UserPostgresIT {
             mockMvc.perform(post("/users").with(csrf())
                             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
                                     .httpBasic("postgres-reader", "integration-test-password"))
-                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                     .andExpect(status().isForbidden());
             mockMvc.perform(post("/users").with(csrf())
                             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
                                     .httpBasic("postgres-admin", "integration-test-password"))
-                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                     .andExpect(status().isCreated());
             assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
             assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history WHERE version='2' AND success=true", Long.class));
@@ -185,7 +185,7 @@ class UserPostgresIT {
 
         mockMvc.perform(put("/users/{id}", id).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Jefferson Atualizado\"}"))
+                        .content("{\"email\":\"fixture@example.com\",\"name\":\"Jefferson Atualizado\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.name").value("Jefferson Atualizado"));
@@ -236,8 +236,8 @@ class UserPostgresIT {
                 .baselineOnMigrate(false)
                 .load();
         assertEquals(0, nextStartup.migrate().migrationsExecuted);
-        assertEquals("3", nextStartup.info().current().getVersion().getVersion());
-        assertEquals(3L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Long.class));
+        assertEquals("4", nextStartup.info().current().getVersion().getVersion());
+        assertEquals(4L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Long.class));
         assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
         assertEquals("Jefferson Andrade", storedName(id));
     }
@@ -264,7 +264,7 @@ class UserPostgresIT {
             // A configuração padrão deve recusar adoção silenciosa de um schema não vazio.
             assertThrows(org.flywaydb.core.api.FlywayException.class, legacy::migrate);
             legacy.baseline();
-            assertEquals(2, legacy.migrate().migrationsExecuted);
+            assertEquals(3, legacy.migrate().migrationsExecuted);
             assertEquals(1L, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM legacy_adoption.flyway_schema_history "
                             + "WHERE version = '1' AND type = 'BASELINE' AND success = true", Long.class));
@@ -427,13 +427,13 @@ class UserPostgresIT {
     void shouldPersistNameAtLimitForCreateAndUpdate() throws Exception {
         String name = "a".repeat(255);
         String response = mockMvc.perform(post("/users").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(java.util.Map.of("name", name))))
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("name", name, "email", "fixture@example.com"))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = objectMapper.readTree(response).get("id").asLong();
         assertEquals(name, storedName(id));
         String updatedName = "b".repeat(255);
         mockMvc.perform(put("/users/{id}", id).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(java.util.Map.of("name", updatedName))))
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("name", updatedName, "email", "fixture@example.com"))))
                 .andExpect(status().isOk());
         assertEquals(updatedName, storedName(id));
         assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
@@ -442,8 +442,8 @@ class UserPostgresIT {
     @Test
     void shouldPreserveDatabaseWhenWriteBodyIsInvalid() throws Exception {
         long id = createUser();
-        String[] bodies = {"{}", "{\"name\":null}", "{\"name\":\"\"}", "{\"name\":\"   \"}",
-                "{\"name\":\"" + "a".repeat(256) + "\"}", "{", "", "null", "[]", "{\"name\":{}}"};
+        String[] bodies = {"{}", "{\"email\":\"fixture@example.com\",\"name\":null}", "{\"email\":\"fixture@example.com\",\"name\":\"\"}", "{\"email\":\"fixture@example.com\",\"name\":\"   \"}",
+                "{\"email\":\"fixture@example.com\",\"name\":\"" + "a".repeat(256) + "\"}", "{", "", "null", "[]", "{\"email\":\"fixture@example.com\",\"name\":{}}"};
         for (String body : bodies) {
             for (String method : new String[]{"POST", "PUT"}) {
                 String path = method.equals("POST") ? "/users" : "/users/" + id;
@@ -461,12 +461,149 @@ class UserPostgresIT {
     void shouldReturnTypedErrorsForMissingUsers() throws Exception {
         for (String method : new String[]{"GET", "PUT", "DELETE"}) {
             mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), "/users/9223372036854775807").with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"))
                     .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.error").value("Not Found"))
                     .andExpect(jsonPath("$.timestamp").isString());
         }
         assertEquals(0L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+    }
+
+
+    @Test
+    void shouldPersistNormalizedEmailAndExposeItInAllResponses() throws Exception {
+        String json = mockMvc.perform(post("/users").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Ana\",\"email\":\"  Ana@Example.COM  \"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.email").value("ana@example.com"))
+                .andReturn().getResponse().getContentAsString();
+        long id = objectMapper.readTree(json).get("id").asLong();
+        assertEquals("ana@example.com", jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class, id));
+        mockMvc.perform(get("/users/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("ana@example.com"));
+        mockMvc.perform(get("/users")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].email").value("ana@example.com"));
+    }
+
+    @Test
+    void shouldRejectDuplicateEmailOnPostAndPutWithoutChangingData() throws Exception {
+        long owner = createUser();
+        long other = insertUser("Outro");
+        var dates = jdbc.queryForMap("SELECT created_at, updated_at FROM users WHERE id = ?", other);
+        String body = "{\"name\":\"Tentativa\",\"email\":\" FIXTURE@EXAMPLE.COM \"}";
+        for (String method : new String[]{"POST", "PUT"}) {
+            mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method),
+                            method.equals("POST") ? "/users" : "/users/" + other).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isConflict()).andExpect(jsonPath("$.status").value(409))
+                    .andExpect(jsonPath("$.error").value("Conflict"))
+                    .andExpect(jsonPath("$.message").value("O e-mail já está cadastrado"));
+            assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+            assertEquals("Outro", storedName(other));
+            assertNull(jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class, other));
+            assertEquals(dates, jdbc.queryForMap("SELECT created_at, updated_at FROM users WHERE id = ?", other));
+            assertEquals("Jefferson Andrade", storedName(owner));
+        }
+        // The database must enforce case-insensitive uniqueness even for direct SQL.
+        assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbc.update("UPDATE users SET email = 'FIXTURE@EXAMPLE.COM' WHERE id = ?", other));
+    }
+
+    @Test
+    void shouldAllowKeepingOwnEmailAndChangingItToAnAvailableAddress() throws Exception {
+        long id = createUser();
+        for (String email : new String[]{"FIXTURE@EXAMPLE.COM", "new@example.com"}) {
+            mockMvc.perform(put("/users/{id}", id).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(java.util.Map.of("name", "Atualizado", "email", email))))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.email").value(email.toLowerCase(java.util.Locale.ROOT)));
+        }
+        assertEquals("new@example.com", jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class, id));
+        assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+    }
+
+    @Test
+    void shouldReadAndCompleteLegacyUserWithoutInventingEmail() throws Exception {
+        long id = insertUser("Legado");
+        mockMvc.perform(get("/users/{id}", id)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(org.hamcrest.Matchers.nullValue()));
+        mockMvc.perform(put("/users/{id}", id).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Legado\",\"email\":\"legado@example.com\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("legado@example.com"));
+        assertEquals("legado@example.com", jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class, id));
+    }
+
+    @Test
+    void shouldPreserveEmailWhenInvalidUpdateIsRejected() throws Exception {
+        long id = createUser();
+        for (String method : new String[]{"POST", "PUT"}) {
+            mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method),
+                            method.equals("POST") ? "/users" : "/users/" + id).with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Changed\",\"email\":\"invalid\"}"))
+                    .andExpect(status().isBadRequest());
+            assertEquals("fixture@example.com", jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class, id));
+            assertEquals("Jefferson Andrade", storedName(id));
+            assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
+        }
+    }
+
+    @Test
+    void shouldUpgradeV3KeepingIdsNamesAccountsAndAuditDates() {
+        jdbc.execute("CREATE SCHEMA email_upgrade");
+        try {
+            Flyway previous = Flyway.configure().dataSource(jdbc.getDataSource())
+                    .defaultSchema("email_upgrade").schemas("email_upgrade")
+                    .locations("classpath:db/migration").target("3").load();
+            assertEquals(3, previous.migrate().migrationsExecuted);
+            Long first = jdbc.queryForObject("INSERT INTO email_upgrade.users (name) VALUES ('Primeiro') RETURNING id", Long.class);
+            jdbc.update("INSERT INTO email_upgrade.users (name) VALUES ('Segundo')");
+            jdbc.update("INSERT INTO email_upgrade.auth_accounts VALUES ('reader', 'preserved-hash', 'READER', true)");
+            var before = jdbc.queryForList("SELECT id, name, created_at, updated_at FROM email_upgrade.users ORDER BY id");
+            Flyway latest = Flyway.configure().dataSource(jdbc.getDataSource())
+                    .defaultSchema("email_upgrade").schemas("email_upgrade").locations("classpath:db/migration").load();
+            assertEquals(1, latest.migrate().migrationsExecuted);
+            assertEquals(before, jdbc.queryForList("SELECT id, name, created_at, updated_at FROM email_upgrade.users ORDER BY id"));
+            assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM email_upgrade.users WHERE email IS NULL", Long.class));
+            assertEquals("preserved-hash", jdbc.queryForObject("SELECT password_hash FROM email_upgrade.auth_accounts WHERE username='reader'", String.class));
+            jdbc.update("UPDATE email_upgrade.users SET email='first@example.com' WHERE id=?", first);
+            assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                    () -> jdbc.update("UPDATE email_upgrade.users SET email='FIRST@EXAMPLE.COM' WHERE id<>?", first));
+            assertEquals(0, latest.migrate().migrationsExecuted);
+            Long next = jdbc.queryForObject("INSERT INTO email_upgrade.users (name) VALUES ('Terceiro') RETURNING id", Long.class);
+            assertTrue(next > first);
+        } finally {
+            jdbc.execute("DROP SCHEMA email_upgrade CASCADE");
+        }
+    }
+
+    @Autowired com.example.crud.service.UserService userService;
+
+    @Test
+    void shouldAllowOnlyOneConcurrentCreateForSameEmail() throws Exception {
+        var ready = new java.util.concurrent.CountDownLatch(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Boolean> create = () -> {
+            ready.countDown();
+            if (!start.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("start timeout");
+            try {
+                userService.createUser(new com.example.crud.dto.UserRequestDTO("Concurrent", "race@example.com"));
+                return true;
+            } catch (org.springframework.dao.DataIntegrityViolationException expected) {
+                return false;
+            }
+        };
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var one = executor.submit(create);
+            var two = executor.submit(create);
+            try {
+                assertTrue(ready.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            } finally {
+                start.countDown();
+            }
+            boolean first = one.get(20, java.util.concurrent.TimeUnit.SECONDS);
+            boolean second = two.get(20, java.util.concurrent.TimeUnit.SECONDS);
+            assertNotEquals(first, second);
+        }
+        assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE email='race@example.com'", Long.class));
+        assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
     }
 
     private long insertUser(String name) {
@@ -476,7 +613,7 @@ class UserPostgresIT {
     private long createUser() throws Exception {
         String response = mockMvc.perform(post("/users").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Jefferson Andrade\"}"))
+                        .content("{\"email\":\"fixture@example.com\",\"name\":\"Jefferson Andrade\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.name").value("Jefferson Andrade"))
