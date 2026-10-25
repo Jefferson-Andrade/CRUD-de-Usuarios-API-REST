@@ -1,0 +1,42 @@
+name: Docker - Build e persistencia
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    name: API e PostgreSQL com Compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: crud-ci
+      API_PORT: '18080'
+      DB_PORT: '15432'
+      APP_ADMIN_USERNAME: ci-admin
+      APP_ADMIN_PASSWORD: ci-only-disposable-password-2026
+    steps:
+      - name: Obter codigo
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Validar Compose
+        run: docker compose config --quiet
+      - name: Compilar imagem e iniciar servicos
+        run: docker compose up --build -d
+      - name: Verificar CRUD, migracoes e persistencia
+        run: python3 scripts/docker-smoke.py
+      - name: Diagnostico em caso de falha
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --no-color --tail=200
+      - name: Remover somente recursos descartaveis do runner CI
+        if: always()
+        run: docker compose down --volumes --remove-orphans
