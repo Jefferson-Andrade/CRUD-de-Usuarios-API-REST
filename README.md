@@ -396,7 +396,15 @@ Swagger: http://localhost:8080/swagger-ui/index.html.
 O banco possui healthcheck e o volume persiste entre reinicializações.
 Consulte o [guia Docker](docs/docker.md) para credenciais, banco existente,
 logs, parada, execução Maven no host e verificação automatizada.
-A configuração é local; a demonstração online e os perfis de produção são etapas posteriores.
+O Compose permanece local; a demonstração online é uma etapa posterior.
+
+## Perfis de configuração
+
+O perfil `dev` é o padrão local. O perfil `prod` exige `DB_URL`, `DB_USERNAME` e
+`DB_PASSWORD` não vazios e desativa a exibição de SQL. O bootstrap ADMIN continua
+opcional e sem senha padrão. Não combine `dev` e `prod`.
+Consulte o [guia de perfis](docs/profiles.md) para execução, variáveis e testes.
+O workflow Docker verifica o CRUD e a persistência nos dois perfis.
 
 ---
 
@@ -417,7 +425,8 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `AuthenticationTest` | Aplicação completa com H2 | Credenciais, papéis, BCrypt, bootstrap e cookie CSRF real | 17 |
 | `UserAuditTest` | Aplicação completa com H2 | Datas automáticas, leitura/listagem, alterações, entrada não controlável e preservação | 5 |
 | `UserEmailTest` | Web, com service mockado | E-mail obrigatório, formato, normalização, limite e conflito específico | 19 |
-| **Total** | | | **136** |
+| `ProfileConfigurationTest` | Configuração real, sem banco | Perfis, variáveis obrigatórias e isolamento de credenciais | 10 |
+| **Total** | | | **146** |
 
 ### Executar os testes sem Docker
 
@@ -433,7 +442,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **111 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2 e contrato OpenAPI. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **121 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI e configuração dos perfis. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -451,7 +460,7 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` prevê os 111 testes convencionais e os 25 testes `UserPostgresIT`, totalizando **136 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` prevê os 121 testes convencionais e os 25 testes `UserPostgresIT`, totalizando **146 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
 
