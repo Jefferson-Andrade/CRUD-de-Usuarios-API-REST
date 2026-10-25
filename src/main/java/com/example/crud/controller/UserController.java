@@ -35,10 +35,12 @@ public class UserController {
         this.userService = userService;
     }
 
-    @ApiResponse(responseCode = "400", description = "Nome inválido, JSON malformado ou corpo ausente",
+    @ApiResponse(responseCode = "400", description = "Nome ou e-mail inválido, JSON malformado ou corpo ausente",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
     @ApiResponse(responseCode = "201", description = "Usuário criado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponseDTO.class)))
+    @ApiResponse(responseCode = "409", description = "E-mail já cadastrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponseDTO createUser(@Valid @RequestBody UserRequestDTO dto) {
@@ -100,12 +102,14 @@ public class UserController {
         return userService.getUserById(id);
     }
 
-    @ApiResponse(responseCode = "400", description = "Nome inválido, JSON malformado ou corpo ausente",
+    @ApiResponse(responseCode = "400", description = "Nome ou e-mail inválido, JSON malformado ou corpo ausente",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
     @ApiResponse(responseCode = "404", description = "Usuário não encontrado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
     @ApiResponse(responseCode = "200", description = "Usuário atualizado",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponseDTO.class)))
+    @ApiResponse(responseCode = "409", description = "E-mail já cadastrado",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponseDTO.class)))
     @PutMapping("/{id}")
     public UserResponseDTO putUser(
             @PathVariable Long id,
