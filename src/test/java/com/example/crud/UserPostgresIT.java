@@ -1,5 +1,8 @@
 package com.example.crud;
 
+import org.springframework.security.test.context.support.WithMockUser;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Import(UserPostgresIT.PostgresConfiguration.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@WithMockUser(roles = "ADMIN")
 class UserPostgresIT {
 
     @TestConfiguration(proxyBeanMethods = false)
@@ -84,7 +88,7 @@ class UserPostgresIT {
     void shouldPersistUpdatedName() throws Exception {
         long id = createUser();
 
-        mockMvc.perform(put("/users/{id}", id)
+        mockMvc.perform(put("/users/{id}", id).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Jefferson Atualizado\"}"))
                 .andExpect(status().isOk())
@@ -103,7 +107,7 @@ class UserPostgresIT {
     void shouldDeletePersistedUserAndReturnNotFound() throws Exception {
         long id = createUser();
 
-        mockMvc.perform(delete("/users/{id}", id))
+        mockMvc.perform(delete("/users/{id}", id).with(csrf()))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
 
@@ -137,8 +141,8 @@ class UserPostgresIT {
                 .baselineOnMigrate(false)
                 .load();
         assertEquals(0, nextStartup.migrate().migrationsExecuted);
-        assertEquals("1", nextStartup.info().current().getVersion().getVersion());
-        assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Long.class));
+        assertEquals("2", nextStartup.info().current().getVersion().getVersion());
+        assertEquals(2L, jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Long.class));
         assertEquals(1L, jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class));
         assertEquals("Jefferson Andrade", storedName(id));
     }
@@ -165,7 +169,7 @@ class UserPostgresIT {
             // A configuração padrão deve recusar adoção silenciosa de um schema não vazio.
             assertThrows(org.flywaydb.core.api.FlywayException.class, legacy::migrate);
             legacy.baseline();
-            assertEquals(0, legacy.migrate().migrationsExecuted);
+            assertEquals(1, legacy.migrate().migrationsExecuted);
             assertEquals(1L, jdbc.queryForObject(
                     "SELECT COUNT(*) FROM legacy_adoption.flyway_schema_history "
                             + "WHERE version = '1' AND type = 'BASELINE' AND success = true", Long.class));
@@ -327,13 +331,13 @@ class UserPostgresIT {
     @Test
     void shouldPersistNameAtLimitForCreateAndUpdate() throws Exception {
         String name = "a".repeat(255);
-        String response = mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON)
+        String response = mockMvc.perform(post("/users").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(java.util.Map.of("name", name))))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long id = objectMapper.readTree(response).get("id").asLong();
         assertEquals(name, storedName(id));
         String updatedName = "b".repeat(255);
-        mockMvc.perform(put("/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(put("/users/{id}", id).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(java.util.Map.of("name", updatedName))))
                 .andExpect(status().isOk());
         assertEquals(updatedName, storedName(id));
@@ -348,7 +352,7 @@ class UserPostgresIT {
         for (String body : bodies) {
             for (String method : new String[]{"POST", "PUT"}) {
                 String path = method.equals("POST") ? "/users" : "/users/" + id;
-                mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), path)
+                mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), path).with(csrf())
                                 .contentType(MediaType.APPLICATION_JSON).content(body))
                         .andExpect(status().isBadRequest())
                         .andExpect(jsonPath("$.status").value(400));
@@ -361,7 +365,7 @@ class UserPostgresIT {
     @Test
     void shouldReturnTypedErrorsForMissingUsers() throws Exception {
         for (String method : new String[]{"GET", "PUT", "DELETE"}) {
-            mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), "/users/9223372036854775807")
+            mockMvc.perform(request(org.springframework.http.HttpMethod.valueOf(method), "/users/9223372036854775807").with(csrf())
                             .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}"))
                     .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404))
                     .andExpect(jsonPath("$.error").value("Not Found"))
@@ -375,7 +379,7 @@ class UserPostgresIT {
     }
 
     private long createUser() throws Exception {
-        String response = mockMvc.perform(post("/users")
+        String response = mockMvc.perform(post("/users").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Jefferson Andrade\"}"))
                 .andExpect(status().isCreated())

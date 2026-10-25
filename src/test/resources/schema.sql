@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS auth_accounts (
+    username VARCHAR(100) PRIMARY KEY,
+    password_hash VARCHAR(100) NOT NULL,
+    role VARCHAR(10) NOT NULL CHECK (role IN ('READER', 'ADMIN')),
+    enabled BOOLEAN NOT NULL DEFAULT TRUE
+);
