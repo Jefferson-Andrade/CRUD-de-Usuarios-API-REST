@@ -60,20 +60,23 @@ public class SecurityConfig {
     }
 
     /** Keeps XOR protection for rendered tokens and accepts the raw cookie token in the Swagger header. */
-    static final class CookieRequestHandler extends XorCsrfTokenRequestAttributeHandler {
+    static final class CookieRequestHandler implements CsrfTokenRequestHandler {
         private final CsrfTokenRequestAttributeHandler plain = new CsrfTokenRequestAttributeHandler();
+        private final XorCsrfTokenRequestAttributeHandler xor = new XorCsrfTokenRequestAttributeHandler();
 
         @Override
         public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> token) {
-            super.handle(request, response, token);
-            token.get(); // Materialize the deferred token so Swagger receives its cookie on GET.
+            xor.handle(request, response, token);
+            CsrfToken raw = token.get();
+            raw.getToken(); // Materialize the deferred cookie for Swagger.
+            request.setAttribute("rawCsrfToken", raw);
         }
 
         @Override
         public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken token) {
             String header = request.getHeader(token.getHeaderName());
             return header != null && !header.isBlank() ? plain.resolveCsrfTokenValue(request, token)
-                    : super.resolveCsrfTokenValue(request, token);
+                    : xor.resolveCsrfTokenValue(request, token);
         }
     }
 }
