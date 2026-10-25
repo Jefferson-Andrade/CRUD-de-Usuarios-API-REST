@@ -12,10 +12,15 @@ permissions:
 
 jobs:
   docker:
-    name: API e PostgreSQL com Compose
+    name: API e PostgreSQL (${{ matrix.profile }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [dev, prod]
     env:
+      SPRING_PROFILES_ACTIVE: ${{ matrix.profile }}
       COMPOSE_PROJECT_NAME: crud-ci
       API_PORT: '18080'
       DB_PORT: '15432'
