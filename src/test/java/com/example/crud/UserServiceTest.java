@@ -124,13 +124,13 @@ class UserServiceTest {
         user.setId(1L);
         user.setName("Jefferson");
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
 
         UserResponseDTO response = userService.updateUser(
                 1L, new UserRequestDTO("Jefferson Atualizado"));
 
         assertThat(response.getName()).isEqualTo("Jefferson Atualizado");
-        verify(userRepository).save(user);
+        verify(userRepository).saveAndFlush(user);
     }
 
     @Test

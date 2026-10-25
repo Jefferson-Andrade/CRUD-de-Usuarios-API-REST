@@ -50,7 +50,8 @@ public class UserService {
 
         user.setName(dto.getName());
 
-        User updatedUser = userRepository.save(user);
+        // Flush runs @PreUpdate before mapping the response, so updatedAt is current in the PUT body.
+        User updatedUser = userRepository.saveAndFlush(user);
 
         return toResponseDTO(updatedUser);
     }
@@ -65,7 +66,9 @@ public class UserService {
     private UserResponseDTO toResponseDTO(User user) {
         return new UserResponseDTO(
                 user.getId(),
-                user.getName()
+                user.getName(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
         );
     }
 }
