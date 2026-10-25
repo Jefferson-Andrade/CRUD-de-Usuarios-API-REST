@@ -40,6 +40,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.HEAD, "/actuator/health/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
                         .requestMatchers(HttpMethod.GET, "/users", "/users/**").hasAnyRole("READER", "ADMIN")
                         .requestMatchers(HttpMethod.HEAD, "/users", "/users/**").hasAnyRole("READER", "ADMIN")

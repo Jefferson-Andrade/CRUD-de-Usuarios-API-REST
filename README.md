@@ -11,6 +11,14 @@ Senhas usam BCrypt em tabela própria; escritas também exigem CSRF.
 Antes de executar os exemplos abaixo, siga o [guia de autenticação](docs/authentication.md) para criar
 o administrador por variáveis de ambiente e configurar Swagger ou PowerShell. Não há credenciais padrão da API.
 
+## Monitoramento básico
+
+`GET /actuator/health` retorna o status geral publicamente, incluindo a saúde
+da conexão com o banco. Somente ADMIN vê componentes e detalhes; os demais
+endpoints operacionais permanecem bloqueados. Falhas 5xx geram logs com
+`X-Request-Id` para correlação, sem registrar dados da requisição.
+Veja o [guia de monitoramento](docs/monitoring.md).
+
 ## E-mail obrigatório e único
 
 Novos cadastros e atualizações exigem **name** e **email**. O e-mail é validado, normalizado para
@@ -35,6 +43,7 @@ Veja o [guia de auditoria dos usuários](docs/user-audit.md) para comportamento,
 | 🌐 **Spring Web MVC** | Desenvolvimento da API REST |
 | 🗃️ **Spring Data JPA** | Persistência de dados |
 | 🐘 **PostgreSQL 16** | Banco de dados |
+| **Spring Boot Actuator** | Saúde da aplicação e do banco |
 | **Flyway** | Migrações SQL versionadas e histórico do schema |
 | 🐳 **Docker / Docker Compose** | Containerização da API e do banco |
 | 📖 **OpenAPI / Swagger** | Documentação e testes da API |
@@ -426,7 +435,9 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `UserAuditTest` | Aplicação completa com H2 | Datas automáticas, leitura/listagem, alterações, entrada não controlável e preservação | 5 |
 | `UserEmailTest` | Web, com service mockado | E-mail obrigatório, formato, normalização, limite e conflito específico | 19 |
 | `ProfileConfigurationTest` | Configuração real, sem banco | Perfis, variáveis obrigatórias e isolamento de credenciais | 10 |
-| **Total** | | | **146** |
+| `HealthEndpointTest` | Aplicação completa com H2 | Resumo, detalhes, permissões e falha simulada | 15 |
+| `FailureLoggingFilterTest` | Filtro isolado | Correlação, exceções e proteção de dados nos logs | 3 |
+| **Total** | | | **164** |
 
 ### Executar os testes sem Docker
 
@@ -442,7 +453,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **121 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI e configuração dos perfis. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **139 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -460,7 +471,7 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` prevê os 121 testes convencionais e os 25 testes `UserPostgresIT`, totalizando **146 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` prevê os 139 testes convencionais e os 25 testes `UserPostgresIT`, totalizando **164 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
 
