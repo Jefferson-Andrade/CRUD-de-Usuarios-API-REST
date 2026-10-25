@@ -14,7 +14,7 @@ authorization = "Basic " + base64.b64encode(credentials).decode()
 client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
 
-def request(path, method="GET", body=None, authenticated=True, csrf=None):
+def request(path, method="GET", body=None, authenticated=True, csrf=None, timeout=5):
     headers = {}
     if authenticated:
         headers["Authorization"] = authorization
@@ -25,18 +25,23 @@ def request(path, method="GET", body=None, authenticated=True, csrf=None):
         headers["Content-Type"] = "application/json"
     req = urllib.request.Request(base + path, data=data, headers=headers, method=method)
     try:
-        with client.open(req, timeout=5) as response:
+        with client.open(req, timeout=timeout) as response:
             raw = response.read()
             return response.status, json.loads(raw) if raw else None
     except urllib.error.HTTPError as error:
-        return error.code, None
+        raw = error.read()
+        try:
+            body = json.loads(raw) if raw else None
+        except ValueError:
+            body = None
+        return error.code, body
 
 
 def ready():
     for _ in range(90):
         try:
-            status, _ = request("/v3/api-docs", authenticated=False)
-            if status == 200:
+            status, health = request("/actuator/health", authenticated=False)
+            if status == 200 and health == {"status": "UP"} and request("/users")[0] == 200:
                 return
         except (OSError, TimeoutError):
             pass
@@ -45,6 +50,11 @@ def ready():
 
 
 ready()
+assert request("/actuator/health", authenticated=False) == (200, {"status": "UP"})
+status, admin_health = request("/actuator/health")
+assert status == 200 and admin_health["components"]["db"]["status"] == "UP"
+assert admin_health["components"]["db"]["details"]["database"] == "PostgreSQL"
+assert request("/actuator/env")[0] == 403
 assert request("/users", authenticated=False)[0] == 401
 assert request("/users")[0] == 200
 status, csrf = request("/csrf")
@@ -78,4 +88,16 @@ status, csrf = request("/csrf")
 assert status == 200
 assert request("/users/" + str(user_id), "DELETE", csrf=csrf)[0] == 204
 assert request("/users/" + str(user_id))[0] == 404
-print("Docker smoke OK: Basic, CSRF, CRUD, V1-V4 e persistencia apos reiniciar.")
+# Simulate a real dependency outage only in the disposable CI database.
+subprocess.run(["docker", "compose", "stop", "db"], check=True)
+try:
+    status, health = request("/actuator/health", authenticated=False, timeout=45)
+    assert status == 503 and health == {"status": "DOWN"}
+    logs = subprocess.check_output(["docker", "compose", "logs", "--no-color", "api"], text=True)
+    assert "http_failure" in logs and "status=503" in logs
+    assert os.environ["APP_ADMIN_PASSWORD"] not in logs
+finally:
+    subprocess.run(["docker", "compose", "up", "-d", "db"], check=True)
+ready()
+assert request("/actuator/health", authenticated=False) == (200, {"status": "UP"})
+print("Docker smoke OK: Basic, CSRF, CRUD, V1-V4, persistencia, health DOWN/UP e logs.")
