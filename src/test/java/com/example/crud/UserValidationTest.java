@@ -41,13 +41,13 @@ class UserValidationTest {
 
     static Stream<Arguments> invalidNames() {
         return Stream.of("POST", "PUT").flatMap(method -> Stream.of(
-                Arguments.of(method, "{}", "O nome é obrigatório"),
-                Arguments.of(method, "{\"name\":null}", "O nome é obrigatório"),
-                Arguments.of(method, "{\"name\":\"\"}", "O nome é obrigatório"),
-                Arguments.of(method, "{\"name\":\"   \"}", "O nome é obrigatório"),
-                Arguments.of(method, "{\"name\":\"" + "a".repeat(256) + "\"}",
+                Arguments.of(method, "{\"email\":\"fixture@example.com\"}", "O nome é obrigatório"),
+                Arguments.of(method, "{\"email\":\"fixture@example.com\",\"name\":null}", "O nome é obrigatório"),
+                Arguments.of(method, "{\"email\":\"fixture@example.com\",\"name\":\"\"}", "O nome é obrigatório"),
+                Arguments.of(method, "{\"email\":\"fixture@example.com\",\"name\":\"   \"}", "O nome é obrigatório"),
+                Arguments.of(method, "{\"email\":\"fixture@example.com\",\"name\":\"" + "a".repeat(256) + "\"}",
                         "O nome deve ter no máximo 255 caracteres"),
-                Arguments.of(method, "{\"name\":\"" + " ".repeat(256) + "\"}", "O nome é obrigatório")));
+                Arguments.of(method, "{\"email\":\"fixture@example.com\",\"name\":\"" + " ".repeat(256) + "\"}", "O nome é obrigatório")));
     }
 
     @ParameterizedTest @MethodSource("invalidNames")
@@ -63,7 +63,7 @@ class UserValidationTest {
         given(service.createUser(any())).willReturn(new UserResponseDTO(1L, name));
         given(service.updateUser(eq(1L), any())).willReturn(new UserResponseDTO(1L, name));
         mvc.perform(request(HttpMethod.valueOf(method), path(method)).with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(java.util.Map.of("name", name))))
+                        .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(java.util.Map.of("name", name, "email", "fixture@example.com"))))
                 .andExpect(status().is(method.equals("POST") ? 201 : 200))
                 .andExpect(jsonPath("$.name").value(name));
         if (method.equals("POST")) verify(service).createUser(argThat(dto -> name.equals(dto.getName())));
@@ -71,7 +71,7 @@ class UserValidationTest {
     }
 
     static Stream<Arguments> invalidBodies() {
-        return Stream.of("POST", "PUT").flatMap(method -> Stream.of("", "{", "null", "[]", "{\"name\":{}}")
+        return Stream.of("POST", "PUT").flatMap(method -> Stream.of("", "{", "null", "[]", "{\"email\":\"fixture@example.com\",\"name\":{}}")
                 .map(body -> Arguments.of(method, body)));
     }
 
@@ -89,7 +89,7 @@ class UserValidationTest {
         given(service.updateUser(eq(999L), any())).willThrow(new UserNotFoundException(999L));
         doThrow(new UserNotFoundException(999L)).when(service).deleteUser(999L);
         expectError(mvc.perform(request(HttpMethod.valueOf(method), "/users/999").with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Ana\"}")),
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}")),
                 404, "Not Found", "Usuário não encontrado: 999");
     }
 
@@ -99,7 +99,7 @@ class UserValidationTest {
         given(service.updateUser(eq(1L), any())).willThrow(new IllegalStateException("internal failure"));
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> mvc.perform(
                         request(HttpMethod.valueOf(method), path(method)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"name\":\"Ana\"}")))
+                                .content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}")))
                 .hasRootCauseInstanceOf(IllegalStateException.class);
     }
 

@@ -59,7 +59,7 @@ class UserAuditTest {
         long id = create().get("id").asLong();
         seedOldDates(id);
         JsonNode updated = read(write(put("/users/{id}", id))
-                .content("{\"name\":\"Nome atualizado\"}"), 200);
+                .content("{\"email\":\"fixture@example.com\",\"name\":\"Nome atualizado\"}"), 200);
         Instant changed = Instant.parse(updated.get("updatedAt").asText());
         assertTrue(changed.isAfter(OLD));
         assertEquals(OLD, Instant.parse(updated.get("createdAt").asText()));
@@ -70,12 +70,12 @@ class UserAuditTest {
     @Test
     void inputDatesCannotOverrideServerDatesOnCreateOrUpdate() throws Exception {
         String spoof = ",\"createdAt\":\"2000-01-01T00:00:00Z\",\"updatedAt\":\"2099-01-01T00:00:00Z\"}";
-        JsonNode created = read(write(post("/users")).content("{\"name\":\"Ana\"" + spoof), 201);
+        JsonNode created = read(write(post("/users")).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"" + spoof), 201);
         long id = created.get("id").asLong();
         assertNotEquals("2000-01-01T00:00:00Z", created.get("createdAt").asText());
         assertEquals(created.get("createdAt"), created.get("updatedAt"));
         seedOldDates(id);
-        JsonNode updated = read(write(put("/users/{id}", id)).content("{\"name\":\"Maria\"" + spoof), 200);
+        JsonNode updated = read(write(put("/users/{id}", id)).content("{\"email\":\"fixture@example.com\",\"name\":\"Maria\"" + spoof), 200);
         assertEquals(OLD, Instant.parse(updated.get("createdAt").asText()));
         assertTrue(Instant.parse(updated.get("updatedAt").asText()).isBefore(Instant.parse("2099-01-01T00:00:00Z")));
     }
@@ -84,7 +84,7 @@ class UserAuditTest {
     void unchangedNameDoesNotChangeAuditDates() throws Exception {
         long id = create().get("id").asLong();
         seedOldDates(id);
-        JsonNode unchanged = read(write(put("/users/{id}", id)).content("{\"name\":\"Ana\"}"), 200);
+        JsonNode unchanged = read(write(put("/users/{id}", id)).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"), 200);
         assertEquals(OLD, Instant.parse(unchanged.get("createdAt").asText()));
         assertEquals(OLD, Instant.parse(unchanged.get("updatedAt").asText()));
         assertEquals(OLD, stored("updated_at", id));
@@ -94,14 +94,14 @@ class UserAuditTest {
     void validationFailureDoesNotChangeAuditDates() throws Exception {
         long id = create().get("id").asLong();
         seedOldDates(id);
-        read(write(put("/users/{id}", id)).content("{\"name\":\"\"}"), 400);
+        read(write(put("/users/{id}", id)).content("{\"email\":\"fixture@example.com\",\"name\":\"\"}"), 400);
         assertEquals(OLD, stored("created_at", id));
         assertEquals(OLD, stored("updated_at", id));
         assertEquals("Ana", jdbc.queryForObject("SELECT name FROM users WHERE id = ?", String.class, id));
     }
 
     private JsonNode create() throws Exception {
-        return read(write(post("/users")).content("{\"name\":\"Ana\"}"), 201);
+        return read(write(post("/users")).content("{\"email\":\"fixture@example.com\",\"name\":\"Ana\"}"), 201);
     }
 
     private MockHttpServletRequestBuilder write(MockHttpServletRequestBuilder request) {

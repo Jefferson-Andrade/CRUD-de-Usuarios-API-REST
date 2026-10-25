@@ -45,13 +45,15 @@ class UserServiceTest {
         User user = new User();
         user.setId(1L);
         user.setName("Jefferson Andrade");
-        when(userRepository.save(any(User.class))).thenReturn(user);
+        user.setEmail("fixture@example.com");
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
 
-        UserResponseDTO response = userService.createUser(new UserRequestDTO("Jefferson Andrade"));
+        UserResponseDTO response = userService.createUser(new UserRequestDTO("Jefferson Andrade", "fixture@example.com"));
 
         assertThat(response.getId()).isEqualTo(1L);
         assertThat(response.getName()).isEqualTo("Jefferson Andrade");
-        verify(userRepository).save(any(User.class));
+        assertThat(response.getEmail()).isEqualTo("fixture@example.com");
+        verify(userRepository).saveAndFlush(argThat(saved -> "fixture@example.com".equals(saved.getEmail())));
     }
 
     @Test
@@ -127,9 +129,10 @@ class UserServiceTest {
         when(userRepository.saveAndFlush(any(User.class))).thenReturn(user);
 
         UserResponseDTO response = userService.updateUser(
-                1L, new UserRequestDTO("Jefferson Atualizado"));
+                1L, new UserRequestDTO("Jefferson Atualizado", "fixture@example.com"));
 
         assertThat(response.getName()).isEqualTo("Jefferson Atualizado");
+        assertThat(response.getEmail()).isEqualTo("fixture@example.com");
         verify(userRepository).saveAndFlush(user);
     }
 
