@@ -2,22 +2,21 @@
 
 [![CI - Testes do CRUD (master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml)
 
-> **JWT em desenvolvimento:** [PR #11](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/11) · [CI da branch](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml?query=branch%3Afeature%2Fjwt-authentication) · [testes Docker](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/docker.yml?query=branch%3Afeature%2Fjwt-authentication). O selo acima reflete apenas a `master`.
+> **JWT integrado:** [PR #11](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/11) · [CI da master](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml) · [testes Docker](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/docker.yml). A integração foi aprovada na branch de desenvolvimento; confira os workflows da `master` após o merge.
 
 > API REST para gerenciamento de usuários, desenvolvida com **Java 21** e **Spring Boot 4.1.1**, aplicando conceitos de desenvolvimento backend, arquitetura em camadas, DTOs, validação, persistência de dados e testes automatizados.
 
-## Autenticação: HTTP Basic e JWT Bearer (em revisão)
+## Autenticação: HTTP Basic e JWT Bearer
 
 A API exige conta com perfil **READER** (consultas) ou **ADMIN** (consultas e alterações).
 As senhas são armazenadas com BCrypt em tabela própria. HTTP Basic permanece disponível;
-a branch `feature/jwt-authentication` adiciona o endpoint `POST /auth/login` para obter
+a API oferece o endpoint `POST /auth/login` para obter
 um JWT de curta duração e autenticar requisições com `Authorization: Bearer <token>`.
 
-**Status:** implementação em revisão no [PR #11](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/11).
-O JWT **não está disponível na branch `master`** até a aprovação e integração do PR.
+**Status:** JWT integrado à `master` pela [PR #11](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/11).
 
 Antes de executar, configure `APP_JWT_SECRET` com um segredo aleatório de pelo menos
-32 bytes UTF-8 (nunca o registre no Git). A aplicação nesta branch não inicia sem esse valor.
+32 bytes UTF-8 (nunca o registre no Git). A aplicação não inicia sem esse valor.
 O prazo padrão dos tokens é 900 segundos. Durante a transição, operações de escrita
 continuam exigindo token CSRF. Não há credenciais padrão.
 
@@ -54,7 +53,7 @@ Veja o [guia de auditoria dos usuários](docs/user-audit.md) para comportamento,
 |---|---|
 | ☕ **Java 21** | Linguagem principal |
 | 🌱 **Spring Boot 4.1.1** | Framework backend |
-| 🔐 **Spring Security / JWT** | HTTP Basic e autenticação Bearer JWT em revisão |
+| 🔐 **Spring Security / JWT** | HTTP Basic e autenticação Bearer JWT |
 | 🌐 **Spring Web MVC** | Desenvolvimento da API REST |
 | 🗃️ **Spring Data JPA** | Persistência de dados |
 | 🐘 **PostgreSQL 16** | Banco de dados |
