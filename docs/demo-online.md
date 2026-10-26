@@ -1,15 +1,23 @@
 # Demonstração online com HTTPS
 
-**Status:** código preparado; hospedagem, banco e URL pública ainda não criados.
-A etapa só estará concluída após validar o ambiente publicado.
+**Status em 26/10/2026:** API publicada no Render Free e conectada ao Neon Free,
+ambos em Ohio. Swagger e health acessíveis por HTTPS; READER e dados fictícios
+provisionados. As verificações administrativas listadas ao final continuam pendentes.
+
+- Swagger: https://crud-usuarios-demo.onrender.com/swagger-ui/index.html
+- Health: https://crud-usuarios-demo.onrender.com/actuator/health
+- Conta de consulta: `demo-reader`; senha fornecida pelo autor, fora do repositório.
+- Branch de implantação: `feat/online-demo-preparation`; deploy automático desativado.
+- O banco hospedado informa PostgreSQL 18.6; os testes CI usam PostgreSQL 16.
+  As quatro migrações foram aplicadas com sucesso no banco hospedado.
 
 ## Escolha do serviço e orçamento
 
 Use um serviço compatível com o Dockerfile (Java 21) e PostgreSQL persistente independente
 do container da API. Antes de contratar, compare o custo mensal total da API + banco,
 memória disponível para a JVM, suspensão por inatividade, expiração do banco,
-retenção, backups e cobrança de tráfego. Nenhum provedor ou plano foi escolhido.
-Confirme os preços e limites atuais no provedor antes de criar recursos.
+retenção, backups e cobrança de tráfego. A demonstração utiliza os planos Free do Render e Neon.
+Confirme os limites atuais antes de ampliar recursos ou alterar o plano.
 
 ## Configuração e primeiro início
 
@@ -45,9 +53,11 @@ variável de bootstrap não redefine uma conta existente.
 
 ## Como apresentar a API
 
-Depois da publicação, registre aqui a URL HTTPS, o link do Swagger,
-o acesso READER aprovado para divulgação e os limites confirmados do plano.
-Até lá, não anuncie uma demonstração como disponível.
+Os links HTTPS estão no início deste guia e no README. O Swagger abre sem login;
+para consultar, use a conta READER. Compartilhe somente a senha destinada à
+demonstração, nunca a senha do PostgreSQL. Render Free suspende a API após
+inatividade; Neon Free também pode suspender o processamento do banco.
+O primeiro acesso pode ser mais lento. Os planos possuem cotas de uso.
 
 No Swagger, abra **Authorize** e informe usuário e senha READER (HTTP Basic).
 A conta consulta usuários; POST, PUT e DELETE exigem ADMIN e CSRF.
@@ -81,10 +91,27 @@ O banco não pode ser recriado a cada deploy. Um rollback de imagem só é segur
 continuar compatível com o schema; não remova registros de `flyway_schema_history`.
 Desative o acesso READER se encerrar a demonstração.
 
-## Critérios pendentes de conclusão
+## Verificação realizada em 26/10/2026
 
-- Escolher provedor e custo total aceitável.
-- Criar serviços, verificar HTTPS, Flyway e banco persistente.
-- Confirmar consulta READER, escritas bloqueadas e ADMIN privado com CSRF.
-- Confirmar dados após reinício/redeploy.
-- Publicar URL e limitações reais no README.
+- Health público retornou `{"status":"UP"}`; Swagger carregou por HTTPS.
+- Flyway aplicou V1–V4 e validou o schema nos deploys seguintes.
+- READER autenticado: `GET /users` retornou HTTP 200 e os três registros fictícios.
+- `POST /users` com READER e CSRF retornou HTTP 403, mensagem
+  `Permissão insuficiente`. O corpo vazio evitou criar dados mesmo se houvesse
+  uma regressão de autorização.
+- A criação automática de conta e fixtures foi desativada após o provisionamento;
+  os valores das credenciais de bootstrap READER foram esvaziados no ambiente.
+
+- Após desativar o bootstrap e reimplantar (deploy `dep-dbfq0aon74is739srujg`),
+  a mesma conta READER retornou HTTP 200. Foram preservados IDs 1–3, nomes,
+  e-mails e timestamps dos três registros. Isso confirma persistência entre deploys.
+
+## Etapas administrativas pendentes
+
+- Nenhuma conta ADMIN foi criada nesta etapa. Provisionar acesso privado de
+  manutenção se necessário, com senha diferente da conta pública READER.
+- Validar o CRUD ADMIN com CSRF e um registro temporário no ambiente hospedado.
+- Configurar o health check HTTP `/actuator/health` no Render; o serviço foi criado
+  com o health check TCP padrão.
+- Integrar o PR à master e alterar a branch da hospedagem quando apropriado.
+- Definir o procedimento de backup do banco conforme os limites do plano escolhido.
