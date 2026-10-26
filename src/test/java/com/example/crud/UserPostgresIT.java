@@ -38,6 +38,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UserPostgresIT {
 
     @Test
+    void demoFixturesAreFictionalAndPreservedAcrossRepeatedStarts() {
+        var bootstrap = new com.example.crud.config.DemoDataBootstrap(jdbc);
+        bootstrap.run(null);
+        assertEquals(3, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE email IN ('ana.demo@example.com', 'bruno.demo@example.com', 'carla.demo@example.com')",
+                Integer.class));
+        var original = jdbc.queryForList("SELECT id, created_at, updated_at FROM users ORDER BY id");
+        jdbc.update("UPDATE users SET name = 'Nome mantido' WHERE email = 'ana.demo@example.com'");
+        bootstrap.run(null);
+        assertEquals(original, jdbc.queryForList("SELECT id, created_at, updated_at FROM users ORDER BY id"));
+        assertEquals("Nome mantido", jdbc.queryForObject(
+                "SELECT name FROM users WHERE email = 'ana.demo@example.com'", String.class));
+        jdbc.update("UPDATE users SET email = 'ANA.DEMO@example.com' WHERE email = 'ana.demo@example.com'");
+        bootstrap.run(null);
+        assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM users", Integer.class));
+    }
+
+
+    @Test
     void shouldPersistAuditDatesAndReturnFreshUpdateTime() throws Exception {
         long id = createUser();
         var initial = jdbc.queryForMap("SELECT created_at, updated_at FROM users WHERE id = ?", id);
