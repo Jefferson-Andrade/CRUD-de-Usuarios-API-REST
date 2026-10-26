@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Value;
 import java.util.function.Supplier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,12 +23,22 @@ import tools.jackson.databind.ObjectMapper;
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain apiSecurity(HttpSecurity http, ObjectMapper mapper, UserDetailsService accounts) throws Exception {
+    LoginRateLimiter loginRateLimiter(
+            @Value("${app.security.login.max-attempts:10}") int attempts,
+            @Value("${app.security.login.max-clients:10000}") int clients,
+            @Value("${app.security.login.window-seconds:60}") long seconds) {
+        return new LoginRateLimiter(attempts, clients, Duration.ofSeconds(seconds), System::nanoTime);
+    }
+
+    @Bean
+    SecurityFilterChain apiSecurity(HttpSecurity http, ObjectMapper mapper, UserDetailsService accounts,
+            LoginRateLimiter limiter) throws Exception {
         var entryPoint = (org.springframework.security.web.AuthenticationEntryPoint) (request, response, error) -> {
             response.setHeader("WWW-Authenticate", "Basic realm=\"crud-api\"");
             writeError(mapper, response, HttpStatus.UNAUTHORIZED, "Autenticação necessária ou credenciais inválidas");
         };
         return http
+                .addFilterBefore(new LoginRateLimitFilter(limiter, mapper), CsrfFilter.class)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(cache -> cache.disable())
                 .formLogin(form -> form.disable())
@@ -59,7 +71,7 @@ public class SecurityConfig {
                 .build();
     }
 
-    private static void writeError(ObjectMapper mapper, HttpServletResponse response,
+    static void writeError(ObjectMapper mapper, HttpServletResponse response,
             HttpStatus status, String message) throws IOException {
         response.setStatus(status.value());
         response.setContentType("application/json");
@@ -89,3 +101,4 @@ public class SecurityConfig {
         }
     }
 }
+

@@ -2,10 +2,15 @@ package com.example.crud.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import com.example.crud.dto.ErrorResponseDTO;
+import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -35,7 +40,10 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        if (request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A senha deve ter no máximo 72 bytes UTF-8");
+        }
         try {
             var auth = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password()));
@@ -43,13 +51,23 @@ public class AuthController {
             var claims = JwtClaimsSet.builder().issuer(issuer).subject(auth.getName())
                     .issuedAt(now).expiresAt(now.plus(lifetime)).build();
             var headers = JwsHeader.with(MacAlgorithm.HS256).build();
-            return new TokenResponse(encoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue(),
-                    "Bearer", lifetime.toSeconds());
+            return ResponseEntity.ok().header("Cache-Control", "no-store").header("Pragma", "no-cache")
+                    .body(new TokenResponse(encoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue(),
+                            "Bearer", lifetime.toSeconds()));
         } catch (AuthenticationException ex) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Credenciais inválidas");
         }
     }
 
-    public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponseDTO> loginFailure(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        return ResponseEntity.status(ex.getStatusCode()).header("Cache-Control", "no-store")
+                .body(new ErrorResponseDTO(status.value(), status.getReasonPhrase(), ex.getReason(), LocalDateTime.now()));
+    }
+
+    public record LoginRequest(@NotBlank @Size(max = 100) String username,
+            @NotBlank @Size(max = 72) String password) {}
     public record TokenResponse(String accessToken, String tokenType, long expiresIn) {}
 }
+
