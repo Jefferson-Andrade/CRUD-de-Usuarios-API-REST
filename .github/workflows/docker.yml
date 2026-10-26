@@ -24,6 +24,7 @@ jobs:
       COMPOSE_PROJECT_NAME: crud-ci
       API_PORT: '18080'
       DB_PORT: '15432'
+      APP_JWT_SECRET: ci-only-jwt-signing-key-at-least-32-bytes
       APP_ADMIN_USERNAME: ci-admin
       APP_ADMIN_PASSWORD: ci-only-disposable-password-2026
     steps:
