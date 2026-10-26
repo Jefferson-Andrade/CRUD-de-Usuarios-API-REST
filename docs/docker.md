@@ -92,3 +92,7 @@ A limpeza com volumes ocorre somente no runner CI, nunca no banco local.
 A verificacao Docker roda nos perfis dev e prod e tambem simula indisponibilidade
 do banco temporario para conferir health DOWN/UP e logs de falha. A suite completa Maven continua
 no workflow CI - Testes do CRUD.
+
+## Segredo JWT obrigatório
+
+Preencha também `APP_JWT_SECRET` no `.env` antes de iniciar a API; o Compose repassa esse valor ao container. Gere um segredo aleatório de pelo menos 32 bytes UTF-8, conforme o [guia JWT](jwt-authentication.md). Para Maven no host, defina a mesma variável na sessão PowerShell. Não use o segredo descartável da CI em ambientes reais.

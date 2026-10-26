@@ -30,6 +30,8 @@ Confirme os limites atuais antes de ampliar recursos ou alterar o plano.
    `PORT` (8080 se ausente); o provedor deve terminar TLS e fornecer a URL HTTPS.
    Não habilite confiança em cabeçalhos de proxy sem conferir a topologia do provedor.
 4. Informe `DB_URL` no formato JDBC, `DB_USERNAME` e `DB_PASSWORD`.
+   Defina também `APP_JWT_SECRET` (segredo aleatório de pelo menos 32 bytes UTF-8);
+   mantenha essa variável após desativar o bootstrap. Consulte o [guia JWT](jwt-authentication.md).
    Confira a CA, o hostname e o modo TLS recomendado para o PostgreSQL gerenciado.
    O exemplo `sslmode=verify-full` exige certificado confiável e nome correspondente;
    adapte o truststore/certificado quando o provedor exigir.

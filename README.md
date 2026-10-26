@@ -2,7 +2,7 @@
 
 [![CI - Testes do CRUD (master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml)
 
-> **JWT integrado:** [PR #11](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/11) · [CI da master](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml) · [testes Docker](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/docker.yml). A integração foi aprovada na branch de desenvolvimento; confira os workflows da `master` após o merge.
+> **Versão 1.0:** CRUD, autenticação HTTP Basic/JWT, validação, migrações, testes e demonstração HTTPS. Consulte os [critérios de conclusão](docs/release-v1.md) e os workflows da `master`.
 
 > API REST para gerenciamento de usuários, desenvolvida com **Java 21** e **Spring Boot 4.1.1**, aplicando conceitos de desenvolvimento backend, arquitetura em camadas, DTOs, validação, persistência de dados e testes automatizados.
 
@@ -22,7 +22,7 @@ continuam exigindo token CSRF. Não há credenciais padrão.
 
 Consulte o [guia HTTP Basic](docs/authentication.md) e o
 [guia JWT Bearer](docs/jwt-authentication.md) para configuração, exemplos e limitações.
-O login JWT ainda não possui proteção contra tentativas excessivas, refresh token ou revogação individual.
+O login limita tentativas por endereço remoto: 10 requisições a cada 60 segundos por instância, com HTTP 429 e `Retry-After`. Não há refresh token ou revogação individual; veja os limites e a política de proxy no guia JWT.
 
 ## Monitoramento básico
 
@@ -408,7 +408,7 @@ Referências: [Spring Boot — Database Initialization](https://docs.spring.io/s
 # 🐳 Docker
 
 API Java 21 e PostgreSQL iniciam juntos. Copie `.env.example` para `.env`,
-configure a conta ADMIN e execute:
+configure a conta ADMIN e `APP_JWT_SECRET` (segredo aleatório de pelo menos 32 bytes UTF-8) e execute:
 
 ```powershell
 docker compose up --build -d
@@ -419,7 +419,7 @@ Swagger: http://localhost:8080/swagger-ui/index.html.
 O banco possui healthcheck e o volume persiste entre reinicializações.
 Consulte o [guia Docker](docs/docker.md) para credenciais, banco existente,
 logs, parada, execução Maven no host e verificação automatizada.
-O Compose permanece local; a demonstração online é uma etapa posterior.
+O Compose atende ao desenvolvimento local; a [demonstração HTTPS](#demonstração-online) utiliza Render e Neon.
 
 ## Perfis de configuração
 
@@ -453,7 +453,10 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `FailureLoggingFilterTest` | Filtro isolado | Correlação, exceções e proteção de dados nos logs | 3 |
 | `DemoReaderBootstrapTest` | Aplicação completa com H2 | Hash, credenciais READER, permissões e preservação das contas | 13 |
 | `DemoOptInTest` | Contexto isolado | Conta e fixtures desabilitadas por padrão; ativação explícita | 3 |
-| **Total Java** | | | **182** |
+| `JwtAuthenticationTest` | Aplicação completa com H2 | Login, assinatura, expiração, conta atual, CSRF real, permissões e CRUD Bearer | 11 |
+| `LoginRateLimiterTest` | Unitário, relógio controlado | Janela, concorrência, capacidade e configuração | 4 |
+| `LoginRateLimitTest` | Aplicação completa com H2 | Limite HTTP, erro 429, isolamento e cabeçalhos de proxy | 2 |
+| **Total Java** | | | **199** |
 
 ### Executar os testes sem Docker
 
@@ -469,7 +472,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **156 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **173 testes** (incluindo JWT e limite de login): serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -487,7 +490,7 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` prevê os 156 testes convencionais e os 26 testes `UserPostgresIT`, totalizando **182 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` prevê os 173 testes convencionais e os 26 testes `UserPostgresIT`, totalizando **199 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
 
@@ -498,8 +501,9 @@ sem acessar rede. Eles também são executados pela CI.
 
 Em 26/10/2026, a [CI do código preparado para demonstração](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40373760394)
 aprovou **156 testes convencionais, 26 de integração PostgreSQL e 4 testes Python**,
-sem falhas. Isso valida a preparação do código; a publicação HTTPS e a persistência
-no serviço hospedado ainda precisam ser verificadas no ambiente real.
+sem falhas. Essa é uma evidência histórica anterior ao JWT. A publicação HTTPS e a persistência
+foram verificadas posteriormente, conforme o [guia de demonstração](docs/demo-online.md).
+A versão de conclusão amplia a suíte para 199 testes Java; confira a execução correspondente na CI.
 
 ### Cenários de integração
 
@@ -694,8 +698,15 @@ cd CRUD-de-Usuarios-API-REST
 
 ## 2. Configure e inicie os serviços
 
-Copie `.env.example` para `.env` e preencha `APP_ADMIN_USERNAME` e
-`APP_ADMIN_PASSWORD`. Não existe senha padrão da API.
+Copie `.env.example` para `.env` e preencha `APP_ADMIN_USERNAME`,
+`APP_ADMIN_PASSWORD` e `APP_JWT_SECRET`. Não existe senha padrão da API.
+Gere o segredo no PowerShell e cole o resultado no `.env` local, mantendo-o fora do Git:
+
+```powershell
+[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+```
+
+Para Maven no host, configure também `$env:APP_JWT_SECRET` na sessão, conforme o [guia JWT](docs/jwt-authentication.md).
 
 ```powershell
 docker compose up --build -d
@@ -762,7 +773,7 @@ Estudante de Análise e Desenvolvimento de Sistemas na **UNINTER**, com foco em 
 - [Saúde da API](https://crud-usuarios-demo.onrender.com/actuator/health)
 
 Hospedagem: Render Free. Banco persistente: Neon Free, na região AWS Ohio.
-O Swagger é público; as consultas exigem HTTP Basic. Use **Authorize** com a
+O Swagger é público; as consultas exigem HTTP Basic ou JWT Bearer. Use **Authorize** com a
 conta READER `demo-reader` e a senha de demonstração fornecida pelo autor.
 Não use a senha do banco nem credenciais ADMIN no Swagger público.
 
