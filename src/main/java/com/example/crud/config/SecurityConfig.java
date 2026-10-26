@@ -38,7 +38,8 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, error) -> writeError(mapper, response,
                                 HttpStatus.FORBIDDEN, error instanceof CsrfException
                                         ? "Token CSRF ausente ou inválido" : "Permissão insuficiente")))
-                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/auth/login")
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CookieRequestHandler()))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
