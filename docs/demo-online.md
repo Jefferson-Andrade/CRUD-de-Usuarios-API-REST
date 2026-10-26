@@ -7,7 +7,9 @@ provisionados. As verificações administrativas listadas ao final continuam pen
 - Swagger: https://crud-usuarios-demo.onrender.com/swagger-ui/index.html
 - Health: https://crud-usuarios-demo.onrender.com/actuator/health
 - Conta de consulta: `demo-reader`; senha fornecida pelo autor, fora do repositório.
-- Branch de implantação: `feat/online-demo-preparation`; deploy automático desativado.
+- Branch de implantação: `master`, após integração do PR #10 com os 12 commits preservados.
+- Deploy automático: **After CI Checks Pass**.
+- Health check HTTP configurado no Render: `/actuator/health`.
 - O banco hospedado informa PostgreSQL 18.6; os testes CI usam PostgreSQL 16.
   As quatro migrações foram aplicadas com sucesso no banco hospedado.
 
@@ -111,7 +113,4 @@ Desative o acesso READER se encerrar a demonstração.
 - Nenhuma conta ADMIN foi criada nesta etapa. Provisionar acesso privado de
   manutenção se necessário, com senha diferente da conta pública READER.
 - Validar o CRUD ADMIN com CSRF e um registro temporário no ambiente hospedado.
-- Configurar o health check HTTP `/actuator/health` no Render; o serviço foi criado
-  com o health check TCP padrão.
-- Integrar o PR à master e alterar a branch da hospedagem quando apropriado.
 - Definir o procedimento de backup do banco conforme os limites do plano escolhido.
