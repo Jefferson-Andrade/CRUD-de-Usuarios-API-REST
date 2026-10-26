@@ -453,10 +453,10 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `FailureLoggingFilterTest` | Filtro isolado | Correlação, exceções e proteção de dados nos logs | 3 |
 | `DemoReaderBootstrapTest` | Aplicação completa com H2 | Hash, credenciais READER, permissões e preservação das contas | 13 |
 | `DemoOptInTest` | Contexto isolado | Conta e fixtures desabilitadas por padrão; ativação explícita | 3 |
-| `JwtAuthenticationTest` | Aplicação completa com H2 | Login, assinatura, expiração, conta atual, CSRF real, permissões e CRUD Bearer | 11 |
+| `JwtAuthenticationTest` | Aplicação completa com H2 | Login, assinatura, expiração, conta atual, CSRF real, permissões e CRUD Bearer | 12 |
 | `LoginRateLimiterTest` | Unitário, relógio controlado | Janela, concorrência, capacidade e configuração | 4 |
 | `LoginRateLimitTest` | Aplicação completa com H2 | Limite HTTP, erro 429, isolamento e cabeçalhos de proxy | 2 |
-| **Total Java** | | | **199** |
+| **Total Java** | | | **200** |
 
 ### Executar os testes sem Docker
 
@@ -472,7 +472,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **173 testes** (incluindo JWT e limite de login): serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **174 testes** (incluindo JWT e limite de login): serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -490,7 +490,7 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` prevê os 173 testes convencionais e os 26 testes `UserPostgresIT`, totalizando **199 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` prevê os 174 testes convencionais e os 26 testes `UserPostgresIT`, totalizando **200 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
 
@@ -503,7 +503,7 @@ Em 26/10/2026, a [CI do código preparado para demonstração](https://github.co
 aprovou **156 testes convencionais, 26 de integração PostgreSQL e 4 testes Python**,
 sem falhas. Essa é uma evidência histórica anterior ao JWT. A publicação HTTPS e a persistência
 foram verificadas posteriormente, conforme o [guia de demonstração](docs/demo-online.md).
-A versão de conclusão amplia a suíte para 199 testes Java; confira a execução correspondente na CI.
+A versão de conclusão amplia a suíte para 200 testes Java; confira a execução correspondente na CI.
 
 ### Cenários de integração
 

@@ -194,4 +194,21 @@ class JwtAuthenticationTest {
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.accessToken").doesNotExist());
         }
     }
+
+    @Test
+    void openApiOffersBasicOrBearerForCrudAndCsrf() throws Exception {
+        String json = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        var paths = mapper.readTree(json).get("paths");
+        for (var operation : new tools.jackson.databind.JsonNode[]{
+                paths.get("/users").get("get"), paths.get("/csrf").get("get")}) {
+            boolean basic = false;
+            boolean bearer = false;
+            for (var requirement : operation.get("security")) {
+                basic |= requirement.has("basicAuth") && !requirement.has("bearerAuth");
+                bearer |= requirement.has("bearerAuth") && !requirement.has("basicAuth");
+            }
+            assertTrue(basic && bearer, "Basic e Bearer devem ser alternativas");
+        }
+    }
 }

@@ -13,7 +13,7 @@
 
 ## Verificação da entrega
 
-A suíte prevista reúne **199 testes Java**: 173 convencionais e 26 com PostgreSQL,
+A suíte prevista reúne **200 testes Java**: 174 convencionais e 26 com PostgreSQL,
 além de **4 testes Python**. A CI executa a suíte completa; o workflow Docker
 verifica os perfis dev/prod e a persistência. Consulte as execuções do commit
 correspondente antes de implantar.
