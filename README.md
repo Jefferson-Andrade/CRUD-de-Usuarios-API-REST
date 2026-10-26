@@ -729,3 +729,11 @@ Estudante de Análise e Desenvolvimento de Sistemas na **UNINTER**, com foco em 
 ---
 
 ⭐ Se este projeto foi útil ou interessante, fique à vontade para explorar o código e acompanhar minha evolução em Java Backend.
+
+## Demonstração online (em preparação)
+
+A preparação para HTTPS inclui porta de hospedagem configurável, bootstrap opcional
+de uma conta READER, dados fictícios e verificação remota por consultas.
+**Ainda não há URL pública nem serviços de hospedagem criados nesta etapa.**
+Consulte o [guia de publicação e validação](docs/demo-online.md) e o
+[modelo de variáveis](deploy.env.example). A conta ADMIN deve permanecer privada.
