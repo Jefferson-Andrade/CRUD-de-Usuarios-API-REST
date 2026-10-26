@@ -2,7 +2,8 @@
 
 ## Modelo
 
-A API usa Spring Security com **HTTP Basic**, sem JWT, refresh token ou sessão de login.
+A API usa Spring Security com **HTTP Basic e JWT Bearer**, sem refresh token ou sessão de login.
+Este guia detalha Basic; consulte também o [guia JWT](jwt-authentication.md).
 O cliente envia `Authorization: Basic <base64(username:password)>` em cada chamada protegida.
 Base64 não criptografa: fora de localhost, disponibilize a API somente por HTTPS.
 
@@ -63,7 +64,7 @@ Nunca use senha em texto puro na coluna de hash. Não há endpoint de provisiona
 4. Execute o CRUD. O Swagger usa o cookie `XSRF-TOKEN` e envia `X-XSRF-TOKEN` automaticamente.
 
 O cookie CSRF não é uma credencial de autenticação. Ele pode ser lido pelo JavaScript do Swagger;
-o cabeçalho Basic continua obrigatório. Atualize o token com GET `/csrf` se os cookies forem apagados.
+o cabeçalho de autenticação Basic ou Bearer continua obrigatório. Atualize o token com GET `/csrf` se os cookies forem apagados.
 A configuração preserva a proteção XOR de tokens renderizados e aceita o token simples no cabeçalho do cookie.
 Não existe logout de servidor porque não há sessão autenticada; remova a autorização do cliente.
 
@@ -91,7 +92,7 @@ $credential = $null
 4. `UserController` → `UserService` → `UserRepository` mantém o fluxo do CRUD e seus DTOs sem credenciais.
 
 O `SecurityContext` vale somente para a requisição. `CsrfController` expõe o token CSRF simples,
-sem criar JWT ou devolver senha/hash. `OpenApiConfig` documenta Basic e as respostas 401/403.
+sem criar JWT ou devolver senha/hash. `OpenApiConfig` documenta Basic/Bearer; os controllers descrevem as respostas 401/403.
 
 ## Migração e testes
 

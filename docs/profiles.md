@@ -89,3 +89,7 @@ Os testes existentes continuam com H2 ou PostgreSQL descartavel do Testcontainer
 A configuracao de teste define bootstrap vazio e perfil padrao test.
 O workflow Docker executa a mesma verificacao de Basic, CSRF, CRUD, migracoes e
 persistencia em uma matriz dev/prod, com credenciais ficticias de um banco temporario.
+
+## JWT em todos os perfis
+
+`APP_JWT_SECRET` é obrigatório em dev e prod, inclusive Maven no host e Docker. Use segredo aleatório de pelo menos 32 bytes UTF-8. `APP_JWT_ISSUER`, `APP_JWT_TTL_SECONDS` e os limites `APP_LOGIN_*` são descritos no [guia JWT](jwt-authentication.md). Os valores de teste ficam restritos aos testes/CI.
