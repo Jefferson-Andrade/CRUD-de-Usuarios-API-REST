@@ -428,16 +428,18 @@ A suíte utiliza **JUnit Jupiter**, **Mockito**, **MockMvc**, **Spring Boot Test
 | `UserServiceTest` | Unitário, com repository mockado | CRUD, filtro normalizado, seleção da consulta paginada, conversão dos DTOs e metadados | 9 |
 | `UserControllerTest` | Web, com service mockado | CRUD, padrões e parâmetros de listagem, limites, erros 400 e falhas inesperadas | 30 |
 | `CrudApplicationTests` | Contexto, com H2 em memória | Carregamento da aplicação | 1 |
-| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, paginação, busca, ordenação, OpenAPI, Flyway e integridade de escritas inválidas | 25 |
+| `UserPostgresIT` | Integração, com PostgreSQL 16 e sem mocks | CRUD, paginação, busca, ordenação, OpenAPI, Flyway, integridade e fixtures de demonstração | 26 |
 | `UserValidationTest` | Web, com service mockado | Limites POST/PUT, corpos inválidos, contrato 400/404, timestamp e falhas inesperadas | 29 |
 | `UserOpenApiTest` | Aplicação completa com H2 | Schemas de validação e de respostas de erro no OpenAPI | 1 |
 | `AuthenticationTest` | Aplicação completa com H2 | Credenciais, papéis, BCrypt, bootstrap e cookie CSRF real | 17 |
 | `UserAuditTest` | Aplicação completa com H2 | Datas automáticas, leitura/listagem, alterações, entrada não controlável e preservação | 5 |
 | `UserEmailTest` | Web, com service mockado | E-mail obrigatório, formato, normalização, limite e conflito específico | 19 |
-| `ProfileConfigurationTest` | Configuração real, sem banco | Perfis, variáveis obrigatórias e isolamento de credenciais | 10 |
+| `ProfileConfigurationTest` | Configuração real, sem banco | Perfis, porta de hospedagem, variáveis obrigatórias e isolamento de credenciais | 11 |
 | `HealthEndpointTest` | Aplicação completa com H2 | Resumo, detalhes, permissões e falha simulada | 15 |
 | `FailureLoggingFilterTest` | Filtro isolado | Correlação, exceções e proteção de dados nos logs | 3 |
-| **Total** | | | **164** |
+| `DemoReaderBootstrapTest` | Aplicação completa com H2 | Hash, credenciais READER, permissões e preservação das contas | 13 |
+| `DemoOptInTest` | Contexto isolado | Conta e fixtures desabilitadas por padrão; ativação explícita | 3 |
+| **Total Java** | | | **182** |
 
 ### Executar os testes sem Docker
 
@@ -453,7 +455,7 @@ Linux/macOS:
 ./mvnw test
 ```
 
-Esses comandos executam **139 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
+Esses comandos executam **156 testes**: serviço, controllers, validação de nome/e-mail, autenticação, auditoria, contexto H2, contrato OpenAPI, configuração dos perfis, saúde e logs de falha. Não exigem PostgreSQL ou Docker.
 
 ### Executar a suíte completa com PostgreSQL
 
@@ -471,9 +473,19 @@ Linux/macOS:
 ./mvnw -Pintegration verify
 ```
 
-O perfil `integration` prevê os 139 testes convencionais e os 25 testes `UserPostgresIT`, totalizando **164 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
+O perfil `integration` prevê os 156 testes convencionais e os 26 testes `UserPostgresIT`, totalizando **182 testes** quando o Docker está acessível. O Maven Failsafe executa as classes `*IT` e verifica o resultado na etapa `verify`.
 
 Não é necessário iniciar o banco com `docker compose up`. O Testcontainers cria um PostgreSQL temporário com a imagem `postgres:16-alpine`, banco `crud_integration` e porta aleatória, separado do banco da aplicação. A primeira execução pode baixar as imagens necessárias. A suíte falha se o Docker não estiver acessível.
+
+### Verificador HTTPS e validação desta entrega
+
+Execute `python scripts/test_demo_smoke.py` para os **4 testes Python** do verificador,
+sem acessar rede. Eles também são executados pela CI.
+
+Em 26/10/2026, a [CI do código preparado para demonstração](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40373760394)
+aprovou **156 testes convencionais, 26 de integração PostgreSQL e 4 testes Python**,
+sem falhas. Isso valida a preparação do código; a publicação HTTPS e a persistência
+no serviço hospedado ainda precisam ser verificadas no ambiente real.
 
 ### Cenários de integração
 
