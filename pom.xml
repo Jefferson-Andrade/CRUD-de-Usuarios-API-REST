@@ -38,7 +38,13 @@
 			<scope>test</scope>
 		</dependency>
 
-		<!-- Banco de dados PostgreSQL -->
+		<!-- JWT Resource Server -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- Banco de dados PostgreSQL -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
