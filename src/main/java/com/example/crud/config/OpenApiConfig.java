@@ -16,6 +16,8 @@ public class OpenApiConfig {
                 .info(new Info()
                 .title("CRUD de Usuários API")
                 .version("1.0.0")
-                .description("API REST para gerenciamento de usuários."));
+                .description("API REST para gerenciamento de usuários. Use Authorize com HTTP Basic. "
+                        + "READER pode consultar; criação, atualização e exclusão exigem ADMIN e token CSRF. "
+                        + "Em demonstrações, use somente dados fictícios e consulte o README para acesso."));
     }
 }

@@ -33,6 +33,9 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Testar verificador HTTPS sem acesso externo
+        run: python3 -B scripts/test_demo_smoke.py
+
       - name: Verificar Docker para Testcontainers
         run: docker info
 
