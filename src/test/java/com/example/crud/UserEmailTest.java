@@ -38,6 +38,9 @@ class UserEmailTest {
     @Autowired ObjectMapper mapper;
     @MockitoBean UserService service;
     @MockitoBean org.springframework.security.core.userdetails.UserDetailsService accounts;
+    @MockitoBean org.springframework.security.authentication.AuthenticationManager authenticationManager;
+    @MockitoBean org.springframework.security.oauth2.jwt.JwtEncoder jwtEncoder;
+    @MockitoBean org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
 
     static Stream<Arguments> invalidEmails() {
         return Stream.of("POST", "PUT").flatMap(method ->

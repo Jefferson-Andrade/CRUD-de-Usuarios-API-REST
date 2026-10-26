@@ -34,6 +34,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WithMockUser(roles = "ADMIN")
 class UserValidationTest {
     @MockitoBean org.springframework.security.core.userdetails.UserDetailsService accounts;
+    @MockitoBean org.springframework.security.authentication.AuthenticationManager authenticationManager;
+    @MockitoBean org.springframework.security.oauth2.jwt.JwtEncoder jwtEncoder;
+    @MockitoBean org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
