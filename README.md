@@ -1,6 +1,8 @@
 # 🚀 CRUD de Usuários — API REST
 
-[![CI - Testes do CRUD](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml)
+[![CI - Testes do CRUD (master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml)
+
+> **JWT em desenvolvimento:** [PR #11](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/11) · [CI da branch](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/ci.yml?query=branch%3Afeature%2Fjwt-authentication) · [testes Docker](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/workflows/docker.yml?query=branch%3Afeature%2Fjwt-authentication). O selo acima reflete apenas a `master`.
 
 > API REST para gerenciamento de usuários, desenvolvida com **Java 21** e **Spring Boot 4.1.1**, aplicando conceitos de desenvolvimento backend, arquitetura em camadas, DTOs, validação, persistência de dados e testes automatizados.
 
