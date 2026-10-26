@@ -102,6 +102,17 @@ class ProfileConfigurationTest {
                 });
     }
 
+    @Test
+    void hostingPortIsOptionalAndUsesProviderValueWhenPresent() {
+        runner.withPropertyValues(production(null, null)).run(context ->
+                assertThat(context.getEnvironment().getProperty("server.port")).isEqualTo("8080"));
+        runner.withPropertyValues(production(null, null)).withPropertyValues("PORT=10000").run(context -> {
+            assertThat(context.getEnvironment().getProperty("server.port")).isEqualTo("10000");
+            assertThat(context.getEnvironment().getProperty("server.address")).isEqualTo("0.0.0.0");
+            assertThat(context.getEnvironment().getProperty("server.shutdown")).isEqualTo("graceful");
+        });
+    }
+
     private String[] production(String changed, String value) {
         List<String> properties = new ArrayList<>();
         properties.add("spring.profiles.active=prod");
