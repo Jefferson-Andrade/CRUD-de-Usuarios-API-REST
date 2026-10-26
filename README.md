@@ -742,10 +742,19 @@ Estudante de Análise e Desenvolvimento de Sistemas na **UNINTER**, com foco em 
 
 ⭐ Se este projeto foi útil ou interessante, fique à vontade para explorar o código e acompanhar minha evolução em Java Backend.
 
-## Demonstração online (em preparação)
+## Demonstração online
 
-A preparação para HTTPS inclui porta de hospedagem configurável, bootstrap opcional
-de uma conta READER, dados fictícios e verificação remota por consultas.
-**Ainda não há URL pública nem serviços de hospedagem criados nesta etapa.**
-Consulte o [guia de publicação e validação](docs/demo-online.md) e o
-[modelo de variáveis](deploy.env.example). A conta ADMIN deve permanecer privada.
+- [Swagger por HTTPS](https://crud-usuarios-demo.onrender.com/swagger-ui/index.html)
+- [Saúde da API](https://crud-usuarios-demo.onrender.com/actuator/health)
+
+Hospedagem: Render Free. Banco persistente: Neon Free, na região AWS Ohio.
+O Swagger é público; as consultas exigem HTTP Basic. Use **Authorize** com a
+conta READER `demo-reader` e a senha de demonstração fornecida pelo autor.
+Não use a senha do banco nem credenciais ADMIN no Swagger público.
+
+A conta READER consulta os três usuários fictícios e não pode alterar registros.
+Os dados utilizam e-mails em `example.com`. Os limites dos planos gratuitos
+se aplicam: o primeiro acesso após inatividade pode demorar para responder.
+
+Consulte o [guia de publicação e validação](docs/demo-online.md) para operação,
+evidências e etapas administrativas pendentes. Credenciais permanecem fora do Git.
