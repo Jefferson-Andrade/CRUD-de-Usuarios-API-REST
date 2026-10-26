@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.*;
@@ -20,7 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 @Configuration(proxyBeanMethods = false)
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain apiSecurity(HttpSecurity http, ObjectMapper mapper) throws Exception {
+    SecurityFilterChain apiSecurity(HttpSecurity http, ObjectMapper mapper, UserDetailsService accounts) throws Exception {
         var entryPoint = (org.springframework.security.web.AuthenticationEntryPoint) (request, response, error) -> {
             response.setHeader("WWW-Authenticate", "Basic realm=\"crud-api\"");
             writeError(mapper, response, HttpStatus.UNAUTHORIZED, "Autenticação necessária ou credenciais inválidas");
@@ -31,6 +32,8 @@ public class SecurityConfig {
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout.disable())
                 .httpBasic(basic -> basic.authenticationEntryPoint(entryPoint))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(new JwtAccountConverter(accounts)))
+                        .authenticationEntryPoint(entryPoint))
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(entryPoint)
                         .accessDeniedHandler((request, response, error) -> writeError(mapper, response,
                                 HttpStatus.FORBIDDEN, error instanceof CsrfException
@@ -44,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.HEAD, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/health/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.HEAD, "/actuator/health/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/csrf").authenticated()
                         .requestMatchers(HttpMethod.GET, "/users", "/users/**").hasAnyRole("READER", "ADMIN")
                         .requestMatchers(HttpMethod.HEAD, "/users", "/users/**").hasAnyRole("READER", "ADMIN")
