@@ -17,6 +17,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.ObjectPostProcessor;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.csrf.*;
 import tools.jackson.databind.ObjectMapper;
 
@@ -50,9 +54,20 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, error) -> writeError(mapper, response,
                                 HttpStatus.FORBIDDEN, error instanceof CsrfException
                                         ? "Token CSRF ausente ou inválido" : "Permissão insuficiente")))
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/auth/login")
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                        .csrfTokenRequestHandler(new CookieRequestHandler()))
+                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(new CookieRequestHandler())
+                        .withObjectPostProcessor(new ObjectPostProcessor<CsrfFilter>() {
+                            @Override
+                            public <O extends CsrfFilter> O postProcess(O filter) {
+                                // Resource Server adds a Bearer exemption. Our contract requires CSRF
+                                // for both authentication methods, with only POST login exempted.
+                                filter.setRequireCsrfProtectionMatcher(new AndRequestMatcher(
+                                        CsrfFilter.DEFAULT_CSRF_MATCHER, new NegatedRequestMatcher(
+                                                PathPatternRequestMatcher.withDefaults()
+                                                        .matcher(HttpMethod.POST, "/auth/login"))));
+                                return filter;
+                            }
+                        }))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**").permitAll()
