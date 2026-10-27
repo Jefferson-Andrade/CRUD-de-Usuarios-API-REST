@@ -18,14 +18,20 @@ além de **4 testes Python**. A CI executa a suíte completa; o workflow Docker
 verifica os perfis dev/prod e a persistência. Consulte as execuções do commit
 correspondente antes de implantar.
 
-A master anterior a esta entrega, commit cbc03aa, teve CI e Docker aprovados.
-A publicação e preservação dos três registros de demonstração foram verificadas
-em 26/10/2026, conforme [evidências](demo-online.md).
-Essas evidências históricas não substituem a validação da nova versão.
+A entrega foi integrada à `master` no commit `ee566dc206ad19f58f13ecaf0706b8c20027081f`.
+A [CI final](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40422226402)
+e o [workflow Docker dev/prod](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40422226471)
+foram aprovados para esse commit: 174 testes convencionais, 26 PostgreSQL e 4 testes Python,
+além da verificação Docker de CRUD e persistência nos dois perfis.
+
+A publicação da v1.0.0 e as consultas HTTPS foram registradas no
+[PR #12](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/12).
+O [guia de demonstração](demo-online.md) separa essa verificação final das evidências
+históricas de preservação dos três registros entre deploys e das tarefas administrativas pendentes.
 
 ## Operação e recuperação
 
-Configure APP_JWT_SECRET também no Render antes do deploy. Nunca altere as migrações
+Mantenha APP_JWT_SECRET configurado no Render em todos os deploys. Nunca altere as migrações
 já aplicadas. Mantenha as credenciais do banco e ADMIN privadas.
 O [guia de demonstração](demo-online.md) descreve backup, restauração, bootstrap
 e verificação de persistência; o README contém um exemplo local de pg_dump/pg_restore.
