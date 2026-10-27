@@ -63,7 +63,7 @@ Veja o [guia de auditoria dos usuários](docs/user-audit.md) para comportamento,
 | 📖 **OpenAPI / Swagger** | Documentação e testes da API |
 | 🧪 **JUnit Jupiter** | Testes automatizados |
 | 🎭 **Mockito** | Testes unitários |
-| 🗄️ **H2** | Banco em memória para o teste de contexto |
+| 🗄️ **H2** | Banco em memória para testes de contexto, autenticação/JWT, auditoria e OpenAPI |
 | 🧰 **Testcontainers** | PostgreSQL temporário nos testes de integração |
 | ✅ **Maven Failsafe** | Execução e verificação dos testes de integração |
 | 📦 **Maven** | Gerenciamento e build |
@@ -503,7 +503,7 @@ Em 26/10/2026, a [CI do código preparado para demonstração](https://github.co
 aprovou **156 testes convencionais, 26 de integração PostgreSQL e 4 testes Python**,
 sem falhas. Essa é uma evidência histórica anterior ao JWT. A publicação HTTPS e a persistência
 foram verificadas posteriormente, conforme o [guia de demonstração](docs/demo-online.md).
-A versão de conclusão amplia a suíte para 200 testes Java; confira a execução correspondente na CI.
+A conclusão v1.0.0 foi validada no commit `ee566dc`: a [CI final](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40422226402) e o [workflow Docker dev/prod](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40422226471) foram aprovados. A suíte final reúne **174 testes convencionais + 26 PostgreSQL = 200 testes Java**, além dos **4 testes Python**.
 
 ### Cenários de integração
 
@@ -638,6 +638,8 @@ Essa abordagem evita expor diretamente a entidade JPA através da API.
 
 # 📁 Estrutura do projeto
 
+Visão resumida dos principais diretórios e arquivos; a tabela de testes acima detalha a suíte completa.
+
 ```text
 CRUD-de-Usuarios-API-REST
 │
@@ -645,6 +647,7 @@ CRUD-de-Usuarios-API-REST
 │   ├── main
 │   │   ├── java
 │   │   │   └── com.example.crud
+│   │   │       ├── config
 │   │   │       ├── controller
 │   │   │       ├── dto
 │   │   │       ├── exception
@@ -654,7 +657,14 @@ CRUD-de-Usuarios-API-REST
 │   │   │
 │   │   └── resources
 │   │       ├── application.properties
-│   │       └── db/migration/V1__create_users_table.sql
+│   │       ├── application-dev.properties
+│   │       ├── application-prod.properties
+│   │       ├── monitoring.properties
+│   │       └── db/migration
+│   │           ├── V1__create_users_table.sql
+│   │           ├── V2__create_auth_accounts.sql
+│   │           ├── V3__add_user_audit_timestamps.sql
+│   │           └── V4__add_user_email.sql
 │   │
 │   └── test
 │       ├── java
@@ -667,6 +677,14 @@ CRUD-de-Usuarios-API-REST
 │       └── resources
 │           └── application.properties
 │
+├── .github/workflows
+│   ├── ci.yml
+│   └── docker.yml
+├── docs
+├── scripts
+├── .env.example
+├── deploy.env.example
+├── Dockerfile
 ├── docker-compose.yaml
 ├── pom.xml
 ├── mvnw
@@ -739,7 +757,7 @@ e executar Maven no host, consulte o [guia Docker](docs/docker.md).
 - Docker Compose
 - Testes unitários
 - Testes Web com MockMvc
-- H2 para o teste de contexto
+- H2 para testes de contexto e testes da aplicação sem PostgreSQL
 - Testes de integração com PostgreSQL real
 - Testcontainers com banco temporário e isolado
 - Ciclo de vida do banco gerenciado pelo Spring Boot

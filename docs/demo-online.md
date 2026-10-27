@@ -7,7 +7,8 @@ provisionados. As verificações administrativas listadas ao final continuam pen
 - Swagger: https://crud-usuarios-demo.onrender.com/swagger-ui/index.html
 - Health: https://crud-usuarios-demo.onrender.com/actuator/health
 - Conta de consulta: `demo-reader`; senha fornecida pelo autor, fora do repositório.
-- Branch de implantação: `master`, após integração do PR #10 com os 12 commits preservados.
+- Branch de implantação: `master`. A publicação inicial ocorreu após o PR #10;
+  a v1.0.0 foi publicada após o PR #12, no commit `ee566dc206ad19f58f13ecaf0706b8c20027081f`.
 - Deploy automático: **After CI Checks Pass**.
 - Health check HTTP configurado no Render: `/actuator/health`.
 - O banco hospedado informa PostgreSQL 18.6; os testes CI usam PostgreSQL 16.
@@ -109,6 +110,20 @@ Desative o acesso READER se encerrar a demonstração.
 - Após desativar o bootstrap e reimplantar (deploy `dep-dbfq0aon74is739srujg`),
   a mesma conta READER retornou HTTP 200. Foram preservados IDs 1–3, nomes,
   e-mails e timestamps dos três registros. Isso confirma persistência entre deploys.
+
+## Verificação final da v1.0.0 em 26/10/2026
+
+Conforme o [registro de conclusão do PR #12](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/pull/12),
+o deploy `dep-dbfufigm7kps73ar0ot0` ficou LIVE às 20:56 (Brasília), no commit `ee566dc`.
+A verificação HTTPS registrou health 200/UP, Swagger 200, OpenAPI 200 com versão 1.0.0
+e alternativas Basic/Bearer, consulta anônima 401 e login sem campos 400.
+Nenhum registro foi alterado nessa verificação. As evidências de persistência acima
+correspondem à publicação anterior e permanecem identificadas como históricas.
+
+A [CI final](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40422226402)
+e o [workflow Docker dev/prod](https://github.com/Jefferson-Andrade/CRUD-de-Usuarios-API-REST/actions/runs/40422226471)
+foram aprovados para esse mesmo commit. A validação em CI não substitui as verificações
+administrativas do ambiente hospedado listadas abaixo.
 
 ## Etapas administrativas pendentes
 

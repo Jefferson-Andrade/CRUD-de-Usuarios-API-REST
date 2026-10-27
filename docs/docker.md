@@ -10,7 +10,10 @@ em um processo sem privilegios de root.
 2. Preencha `APP_ADMIN_USERNAME` e `APP_ADMIN_PASSWORD` para criar a primeira conta.
    A senha deve ter pelo menos 12 caracteres e no maximo 72 bytes UTF-8.
    Nao publique o arquivo .env. Para valores contendo $ ou #, use aspas simples no .env.
-3. Execute:
+3. Preencha também `APP_JWT_SECRET` no `.env` com um segredo aleatório de pelo menos
+   32 bytes UTF-8, conforme o [guia JWT](jwt-authentication.md). O Compose repassa
+   esse valor ao container; a API não inicia sem ele. Não use o segredo descartável da CI.
+4. Execute:
 
 ```powershell
 docker compose up --build -d
@@ -42,10 +45,12 @@ o banco. Consulte o [guia de monitoramento](monitoring.md).
 | API_PORT | 8080 | Porta da API no host |
 | APP_ADMIN_USERNAME | vazio | Bootstrap opcional do ADMIN |
 | APP_ADMIN_PASSWORD | vazio | Senha inicial do ADMIN |
+| APP_JWT_SECRET | sem padrão | Segredo obrigatório para assinatura e validação JWT |
 
 A API acessa `db:5432` na rede interna. API e banco publicam portas apenas em
 127.0.0.1. Este Compose permanece local. Os perfis dev/prod estao descritos no
-[guia de configuracao](profiles.md); a demonstracao HTTPS sera uma etapa posterior.
+[guia de configuracao](profiles.md); a demonstracao HTTPS publicada em Render/Neon
+esta descrita no [guia de demonstracao](demo-online.md).
 
 As credenciais POSTGRES_* inicializam somente um volume novo. Em volume existente,
 mudar o .env nao altera usuarios ou senhas: configure os valores reais ja utilizados.
@@ -71,6 +76,10 @@ e nao remova o volume para contornar erros de migracao.
 
 ## Executar a API pelo Maven no host
 
+Antes de executar Maven, defina `APP_JWT_SECRET` na sessao conforme o
+[guia JWT](jwt-authentication.md#configuração). Essa variavel e obrigatoria mesmo
+quando as credenciais do banco usam os padroes locais; Maven nao carrega `.env`.
+
 Inicie apenas o banco para evitar duas APIs usando a mesma porta:
 
 ```powershell
@@ -92,7 +101,3 @@ A limpeza com volumes ocorre somente no runner CI, nunca no banco local.
 A verificacao Docker roda nos perfis dev e prod e tambem simula indisponibilidade
 do banco temporario para conferir health DOWN/UP e logs de falha. A suite completa Maven continua
 no workflow CI - Testes do CRUD.
-
-## Segredo JWT obrigatório
-
-Preencha também `APP_JWT_SECRET` no `.env` antes de iniciar a API; o Compose repassa esse valor ao container. Gere um segredo aleatório de pelo menos 32 bytes UTF-8, conforme o [guia JWT](jwt-authentication.md). Para Maven no host, defina a mesma variável na sessão PowerShell. Não use o segredo descartável da CI em ambientes reais.

@@ -16,7 +16,10 @@ Contas desabilitadas não autenticam. Usuários desconhecidos e senhas incorreta
 |---|---|
 | GET/HEAD `/users` e `/users/{id}` | READER ou ADMIN |
 | POST `/users`, PUT/DELETE `/users/{id}` | ADMIN e token CSRF válido |
+| POST `/auth/login` | Público, sem CSRF; sujeito ao limite de requisições |
 | GET `/csrf` | Qualquer conta autenticada |
+| GET/HEAD `/actuator/health` | Status geral público; detalhes somente ADMIN |
+| GET/HEAD `/actuator/health/**` | ADMIN |
 | GET Swagger e `/v3/api-docs` | Público |
 | Demais rotas/métodos | Negados por padrão |
 
@@ -29,7 +32,9 @@ mesmo sem credenciais. Os erros usam `status`, `error`, `message` e `timestamp`,
 
 Para executar tudo em containers, siga o [guia Docker](docker.md).
 Para executar Maven no host, pare uma API em container com `docker compose stop api`
-e inicie somente o PostgreSQL com `docker compose up -d db`. Na pasta do projeto, execute:
+e inicie somente o PostgreSQL com `docker compose up -d db`. Na pasta do projeto, defina primeiro `APP_JWT_SECRET` na sessão conforme o
+[guia JWT](jwt-authentication.md#configuração). O `.env` não é carregado automaticamente
+pelo Maven; sem o segredo a aplicação não inicia. Depois execute:
 
 ```powershell
 $env:APP_ADMIN_USERNAME = 'admin'
