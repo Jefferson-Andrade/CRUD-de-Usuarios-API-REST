@@ -1,6 +1,7 @@
 package com.example.crud;
 
 import com.example.crud.config.DemoReaderBootstrap;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,9 +44,22 @@ class DemoReaderBootstrapTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.components").doesNotExist());
         mvc.perform(get("/actuator/health/db").with(httpBasic("demo-reader", PASSWORD)))
                 .andExpect(status().isForbidden());
-        mvc.perform(post("/users").with(httpBasic("demo-reader", PASSWORD)).with(csrf())
+        // Use the real cookie/header flow: csrf() replaces the shared filter's
+        // repository and breaks cookie/session assertions in AuthenticationTest.
+        Cookie csrfCookie = mvc.perform(get("/csrf").with(httpBasic("demo-reader", PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertNull(result.getRequest().getSession(false)))
+                .andReturn().getResponse().getCookie("XSRF-TOKEN");
+        assertNotNull(csrfCookie);
+        mvc.perform(post("/users").with(httpBasic("demo-reader", PASSWORD))
+                        .cookie(csrfCookie).header("X-XSRF-TOKEN", csrfCookie.getValue())
                         .contentType("application/json").content("{\"name\":\"Demo\",\"email\":\"test@example.com\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Permissão insuficiente"));
+        mvc.perform(get("/csrf").with(httpBasic("demo-reader", PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(cookie().exists("XSRF-TOKEN"))
+                .andExpect(result -> assertNull(result.getRequest().getSession(false)));
     }
 
     @Test
